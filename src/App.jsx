@@ -973,6 +973,12 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
   const [newMaterial, setNewMaterial] = useState({ title: '', url: '' });
   const [deleteMaterialId, setDeleteMaterialId] = useState(null);
 
+  // IO States
+  const [showIOModal, setShowIOModal] = useState(false);
+  const [ioType, setIoType] = useState('videos');
+  const [ioText, setIoText] = useState('');
+  const [ioError, setIoError] = useState('');
+
   const confirmAddVideo = () => {
     if(newVideo.title.trim() && newVideo.url.trim()) {
       const videoId = getYouTubeVideoId(newVideo.url);
@@ -1009,6 +1015,71 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
     setDeleteMaterialId(null);
   };
 
+  const handleOpenIO = (type) => {
+    setIoType(type);
+    setIoText(JSON.stringify(type === 'videos' ? videos : materials, null, 2));
+    setIoError('');
+    setShowIOModal(true);
+  };
+
+  const handleImport = () => {
+    try {
+      const parsed = JSON.parse(ioText);
+      if (!Array.isArray(parsed)) throw new Error('資料必須是陣列格式');
+
+      if (ioType === 'videos') {
+        const processed = parsed.map(v => ({
+          ...v,
+          id: v.id || Date.now() + Math.random(),
+          videoId: v.videoId || getYouTubeVideoId(v.url),
+          views: v.views || 0
+        }));
+        updateAppState({ videos: processed });
+      } else {
+        const processed = parsed.map(m => {
+          let ext = m.ext || 'LINK';
+          if (!m.ext && m.url) {
+            const urlUpper = m.url.toUpperCase();
+            if (urlUpper.includes('.PDF')) ext = 'PDF';
+            else if (urlUpper.includes('.DOC') || urlUpper.includes('DOCUMENT')) ext = 'DOC';
+            else if (urlUpper.includes('DRIVE.GOOGLE')) ext = 'DRIVE';
+          }
+          return {
+            ...m,
+            id: m.id || Date.now() + Math.random(),
+            ext
+          };
+        });
+        updateAppState({ materials: processed });
+      }
+      setShowIOModal(false);
+      alert(`批次匯入${ioType === 'videos' ? '影片' : '教材'}成功！`);
+    } catch (err) {
+      setIoError('資料格式有誤，請確認是否為標準的 JSON 格式！');
+    }
+  };
+
+  const handleCopy = () => {
+    try {
+      navigator.clipboard.writeText(ioText).then(() => {
+        alert('已複製到剪貼簿！');
+      }).catch(err => fallbackCopyTextToClipboard(ioText));
+    } catch (err) {
+      fallbackCopyTextToClipboard(ioText);
+    }
+  };
+
+  const fallbackCopyTextToClipboard = (text) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try { document.execCommand('copy'); alert('已複製到剪貼簿！'); } 
+    catch (err) { alert('複製失敗，請手動選取文字複製。'); }
+    document.body.removeChild(textArea);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in">
       <div className="mb-8">
@@ -1022,9 +1093,14 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative">
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-6"><PlayCircle className="text-red-500" /> 教學影片區</h3>
             {isAdmin && (
-              <button onClick={() => setShowAddVideoModal(true)} className="absolute top-6 right-6 flex items-center gap-1 text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-medium">
-                <Plus size={16}/> 新增影片
-              </button>
+              <div className="absolute top-6 right-6 flex gap-2">
+                 <button onClick={() => handleOpenIO('videos')} className="flex items-center gap-1 text-sm bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium">
+                   <Download size={16}/> 匯入/匯出
+                 </button>
+                 <button onClick={() => setShowAddVideoModal(true)} className="flex items-center gap-1 text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-medium">
+                  <Plus size={16}/> 新增影片
+                </button>
+              </div>
             )}
             <div className="space-y-4">
               {videos.map((video) => (
@@ -1059,9 +1135,14 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
               <FileText className="text-blue-500" /> 補充教材下載
             </h3>
             {isAdmin && (
-              <button onClick={() => setShowAddMaterialModal(true)} className="absolute top-6 right-6 text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded-lg">
-                <Plus size={16}/>
-              </button>
+              <div className="absolute top-6 right-6 flex gap-2">
+                 <button onClick={() => handleOpenIO('materials')} className="flex items-center gap-1 text-sm bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium">
+                   <Download size={16}/> 匯入/匯出
+                 </button>
+                 <button onClick={() => setShowAddMaterialModal(true)} className="flex items-center gap-1 text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-medium">
+                  <Plus size={16}/> 新增教材
+                </button>
+              </div>
             )}
             <div className="space-y-2">
               {materials.map((file) => (
@@ -1137,6 +1218,36 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
                 <button onClick={() => setShowAddMaterialModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
                 <button onClick={confirmAddMaterial} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">確認新增</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import/Export Modal */}
+      {showIOModal && (
+        <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
+            <h3 className="text-xl font-bold mb-2">匯入 / 匯出 {ioType === 'videos' ? '教學影片' : '補充教材'}</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              您可以在此複製目前的資料備份，或是貼上 JSON 格式資料進行整筆匯入。<br/>
+              <span className="text-blue-600 font-medium">💡 小技巧：貼上大量資料後，系統會自動幫您解析影片縮圖與教材類型標籤。若想永久保存為預設值，請一併貼到程式碼的 INITIAL_VIDEOS 或 INITIAL_MATERIALS 區塊！</span>
+            </p>
+            
+            <div className="flex-1 overflow-hidden flex flex-col min-h-[300px]">
+              <textarea 
+                className="w-full flex-1 p-4 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                value={ioText} onChange={(e) => setIoText(e.target.value)} spellCheck="false"
+              />
+            </div>
+            
+            {ioError && <p className="text-red-500 text-sm mt-3 font-medium">{ioError}</p>}
+            
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
+              <button onClick={() => setShowIOModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
+              <button onClick={handleCopy} className="flex items-center gap-1 px-4 py-2 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-900">
+                <Copy size={16}/> 複製內容
+              </button>
+              <button onClick={handleImport} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">儲存匯入</button>
             </div>
           </div>
         </div>
