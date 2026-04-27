@@ -19,7 +19,18 @@ if (typeof window !== 'undefined' && !document.getElementById('tailwind-cdn')) {
   document.head.appendChild(script);
 }
 
-// --- Firebase 初始化 (目前無金鑰，以純前端模式運作) ---
+// ==========================================
+// ⚠️ Firebase 初始化 (請在這裡貼上您的金鑰)
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyB_XxMKi1clOZo8nEJohR64rNhTBfzLqoA",
+  authDomain: "class-website-802.firebaseapp.com",
+  projectId: "class-website-802",
+  storageBucket: "class-website-802.firebasestorage.app",
+  messagingSenderId: "448378354222",
+  appId: "1:448378354222:web:57443ae89e6bfda44cfdbf"
+};
+
 const firebaseConfig = {};
 let app, auth, db;
 try {
