@@ -1013,7 +1013,7 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">數位學習資源</h2>
-        <p className="text-gray-500">數學沒有捷徑，只有多聽、多看、多練</p>
+        <p className="text-gray-500">讀書沒有捷徑，只有多聽、多看、多練</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
