@@ -244,7 +244,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="pt-24 pb-20 md:pb-12 flex-grow">
-        {activeTab === 'home' && <HomeView navigateTo={navigateTo} />}
+        {activeTab === 'home' && <HomeView navigateTo={navigateTo} isAdmin={isAdmin} />}
         {activeTab === 'photos' && <PhotosView isAdmin={isAdmin} ConfirmModal={ConfirmModal} />}
         {activeTab === 'info' && <ClassInfoView isAdmin={isAdmin} />}
         {activeTab === 'resources' && <ResourcesView isAdmin={isAdmin} ConfirmModal={ConfirmModal} />}
@@ -304,25 +304,57 @@ export default function App() {
 // Views Components
 // ==========================================
 
-function HomeView({ navigateTo }) {
+function HomeView({ navigateTo, isAdmin }) {
+  const [heroBg, setHeroBg] = useState('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=2000');
+  const [showEditBgModal, setShowEditBgModal] = useState(false);
+  const [newHeroBg, setNewHeroBg] = useState('');
+
+  const handleEditClick = () => {
+    setNewHeroBg(heroBg);
+    setShowEditBgModal(true);
+  };
+
+  const confirmChangeBg = () => {
+    if (newHeroBg.trim()) {
+      setHeroBg(newHeroBg.trim());
+    }
+    setShowEditBgModal(false);
+  };
+
   return (
     <div className="animate-in fade-in duration-500">
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl h-[400px] md:h-[500px] group">
+        {/* 背景加上深色底 (bg-gray-900) 配合照片淡化 (opacity-40) */}
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl h-[400px] md:h-[500px] group bg-gray-900">
+          
+          {/* Admin Edit Button */}
+          {isAdmin && (
+            <button 
+              onClick={handleEditClick}
+              className="absolute top-4 right-4 z-20 bg-white/20 hover:bg-white/40 text-white p-2.5 rounded-full backdrop-blur-md transition-all shadow-lg flex items-center gap-2"
+              title="更換封面照片"
+            >
+              <Edit2 size={18} />
+              <span className="text-sm font-medium pr-1">更換封面照片</span>
+            </button>
+          )}
+
           <img 
-            src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=2000" 
+            src={heroBg} 
             alt="Hero Class" 
-            className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-1000"
+            /* 照片淡化 opacity-40 讓前方文字更清晰 */
+            className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-1000 opacity-40"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-transparent flex flex-col justify-end p-8 md:p-12">
+          
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/20 to-transparent flex flex-col justify-end p-8 md:p-12">
             <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full w-max mb-4 shadow-sm">
               班級公告
             </span>
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight leading-tight">
               歡迎來到八年2班<br/>探索邏輯與學習的樂趣
             </h2>
-            <p className="text-gray-200 md:text-lg max-w-2xl mb-8">
+            <p className="text-gray-200 md:text-lg max-w-2xl mb-8 drop-shadow-md">
               記錄孩子們的成長點滴，提供豐富的數學學習資源，建立親師溝通的優質橋樑。
             </p>
             
@@ -340,6 +372,34 @@ function HomeView({ navigateTo }) {
           </div>
         </div>
       </div>
+
+      {/* Edit Hero Background Modal */}
+      {showEditBgModal && (
+        <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold mb-4">更換首頁背景照片</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">照片網址 (URL)</label>
+                <input 
+                  type="text" 
+                  value={newHeroBg} 
+                  onChange={e => setNewHeroBg(e.target.value)} 
+                  className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" 
+                  placeholder="https://..." 
+                />
+              </div>
+              <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                💡 建議使用橫式的高解析度照片。照片套用後會自動「淡化」並覆蓋深色遮罩，以確保前方的白色歡迎文字能清晰閱讀。
+              </p>
+              <div className="flex gap-2 justify-end mt-6">
+                <button onClick={() => setShowEditBgModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
+                <button onClick={confirmChangeBg} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">確認更換</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Links Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
