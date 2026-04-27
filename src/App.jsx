@@ -31,7 +31,6 @@ const firebaseConfig = {
   appId: "1:448378354222:web:57443ae89e6bfda44cfdbf"
 };
 
-const firebaseConfig = {};
 let app, auth, db;
 try {
   if (Object.keys(firebaseConfig).length > 0) {
