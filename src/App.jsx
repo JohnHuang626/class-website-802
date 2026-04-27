@@ -15,6 +15,21 @@ if (typeof window !== 'undefined' && !document.getElementById('tailwind-cdn')) {
   document.head.appendChild(script);
 }
 
+// --- 輔助工具：自動轉換 Google Drive 連結為圖片直連網址 ---
+const processImageUrl = (url) => {
+  if (!url) return '';
+  const trimmedUrl = url.trim();
+  // 檢查是否為 Google Drive 的一般分享連結
+  const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
+  const match = trimmedUrl.match(driveRegex);
+  
+  if (match && match[1]) {
+    // 轉換為 Google 官方的直連圖片格式 (lh3.googleusercontent.com)
+    return `https://lh3.googleusercontent.com/d/${match[1]}`;
+  }
+  return trimmedUrl;
+};
+
 // --- Mock Data ---
 const CLASS_INFO = {
   name: "八年2班 師生天地",
@@ -46,7 +61,6 @@ const SUBJECTS = [
   '國文', '英語', '數學', '自然', '地理', '歷史', '公民', '社會', 
   '體育', '音樂', '科技', '社團', '彈英', '彈自', '彈數', '輔導', 
   '資訊', '童軍', '表演', '健康', '本土語', '家政', '班會', '視覺',
-  // 配合預設課表與常見需求保留
   '綜合', '自習', '大掃除'
 ];
 
@@ -316,7 +330,9 @@ function HomeView({ navigateTo, isAdmin }) {
 
   const confirmChangeBg = () => {
     if (newHeroBg.trim()) {
-      setHeroBg(newHeroBg.trim());
+      // 處理網址 (自動轉換 Google Drive 連結)
+      const processedUrl = processImageUrl(newHeroBg);
+      setHeroBg(processedUrl);
     }
     setShowEditBgModal(false);
   };
@@ -386,11 +402,14 @@ function HomeView({ navigateTo, isAdmin }) {
                   value={newHeroBg} 
                   onChange={e => setNewHeroBg(e.target.value)} 
                   className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" 
-                  placeholder="https://..." 
+                  placeholder="可直接貼上 Google 雲端硬碟的分享連結..." 
                 />
               </div>
-              <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                💡 建議使用橫式的高解析度照片。照片套用後會自動「淡化」並覆蓋深色遮罩，以確保前方的白色歡迎文字能清晰閱讀。
+              <p className="text-xs text-gray-500 bg-blue-50 text-blue-700 p-3 rounded-lg border border-blue-100 flex items-start gap-2">
+                <span className="shrink-0 mt-0.5">💡</span>
+                <span>
+                  <strong>已支援 Google Drive！</strong><br/>請將 Google 雲端硬碟照片設為「知道連結的人都能查看」，然後直接將分享連結貼到上方，系統會為您自動轉換。
+                </span>
               </p>
               <div className="flex gap-2 justify-end mt-6">
                 <button onClick={() => setShowEditBgModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
@@ -498,8 +517,13 @@ function PhotosView({ isAdmin, ConfirmModal }) {
 
   const handleAddPhoto = () => {
     if(!newPhoto.url || !newPhoto.title) return;
+    
+    // 自動轉換 Google Drive 連結
+    const processedUrl = processImageUrl(newPhoto.url);
+    
     const photo = {
       ...newPhoto,
+      url: processedUrl,
       id: Date.now(),
       date: newPhoto.date || new Date().toISOString().split('T')[0]
     };
@@ -554,6 +578,7 @@ function PhotosView({ isAdmin, ConfirmModal }) {
               alt={photo.title} 
               className="w-full h-auto transform group-hover:scale-105 transition-transform duration-700" 
               loading="lazy"
+              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
               <span className="text-white/80 text-sm mb-1">{photo.date}</span>
@@ -589,6 +614,9 @@ function PhotosView({ isAdmin, ConfirmModal }) {
               <div>
                 <label className="block text-sm text-gray-600 mb-1">照片網址 (URL)</label>
                 <input type="text" value={newPhoto.url} onChange={e => setNewPhoto({...newPhoto, url: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
+                <p className="text-xs text-blue-600 mt-1 mt-1">
+                  💡 直接貼上 Google 雲端硬碟的分享連結，系統會自動轉換。
+                </p>
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1">標題</label>
