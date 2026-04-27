@@ -50,17 +50,24 @@ const SUBJECTS = [
   '綜合', '自習', '大掃除'
 ];
 
+const STUDENTS = [
+  '林丞塏', '張昱翔', '王永騰', '方泊淳', '陳宇全', '王自義', '陳俋卲', 
+  '蔡豐澤', '林佾致', '楊子易', '劉東勳', '吳和諺', '黃苡欣', '林千玉', 
+  '林貝芸', '張晴瑜', '江筠苡', '吳欣諭', '彭采玲', '陳湘緹', '楊淯淋', 
+  '謝玉茹', '張喻喬', '王薽妤', '邱米詩'
+];
+
 const INITIAL_ROSTER = [
-  { id: 1, role: '班長', name: '王大明', desc: '負責統籌班級事務' },
-  { id: 2, role: '副班長', name: '林小美', desc: '協助班長，點名簿管理' },
-  { id: 3, role: '風紀股長', name: '陳建宏', desc: '維持班級秩序' },
-  { id: 4, role: '學藝股長', name: '張雅婷', desc: '教室佈置、作業登記' },
-  { id: 5, role: '衛生股長', name: '黃俊傑', desc: '整潔區域分配與檢查' },
-  { id: 6, role: '體育股長', name: '劉宇軒', desc: '帶操、體育器材借還' },
-  { id: 7, role: '總務股長', name: '吳念真', desc: '負責班級經費收支與保管' },
-  { id: 8, role: '輔導股長', name: '許佳蓉', desc: '協助輔導活動與同學關懷' },
-  { id: 9, role: '圖書股長', name: '蔡子傑', desc: '負責班級圖書管理與借閱' },
-  { id: 10, role: '午餐秘書', name: '鄭心怡', desc: '負責營養午餐與餐桶歸還' },
+  { id: 1, role: '班長', name: '林丞塏', desc: '負責統籌班級事務' },
+  { id: 2, role: '副班長', name: '張昱翔', desc: '協助班長，點名簿管理' },
+  { id: 3, role: '風紀股長', name: '王永騰', desc: '維持班級秩序' },
+  { id: 4, role: '學藝股長', name: '黃苡欣', desc: '教室佈置、作業登記' },
+  { id: 5, role: '衛生股長', name: '林千玉', desc: '整潔區域分配與檢查' },
+  { id: 6, role: '體育股長', name: '劉東勳', desc: '帶操、體育器材借還' },
+  { id: 7, role: '總務股長', name: '吳和諺', desc: '負責班級經費收支與保管' },
+  { id: 8, role: '輔導股長', name: '林貝芸', desc: '協助輔導活動與同學關懷' },
+  { id: 9, role: '圖書股長', name: '江筠苡', desc: '負責班級圖書管理與借閱' },
+  { id: 10, role: '午餐秘書', name: '吳欣諭', desc: '負責營養午餐與餐桶歸還' },
 ];
 
 const INITIAL_VIDEOS = [
@@ -750,7 +757,16 @@ function ClassInfoView({ isAdmin }) {
                     {isEditing ? (
                       <div className="space-y-1">
                         <input value={student.role} onChange={e=>handleRosterChange(student.id, 'role', e.target.value)} className="w-full text-sm font-bold border rounded p-1" placeholder="職位"/>
-                        <input value={student.name} onChange={e=>handleRosterChange(student.id, 'name', e.target.value)} className="w-full text-sm text-blue-600 border rounded p-1" placeholder="姓名"/>
+                        <select 
+                          value={student.name} 
+                          onChange={e=>handleRosterChange(student.id, 'name', e.target.value)} 
+                          className="w-full text-sm text-blue-600 border rounded p-1 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                        >
+                          <option value="">選擇學生</option>
+                          {STUDENTS.map(name => (
+                            <option key={name} value={name}>{name}</option>
+                          ))}
+                        </select>
                         <input value={student.desc} onChange={e=>handleRosterChange(student.id, 'desc', e.target.value)} className="w-full text-xs text-gray-500 border rounded p-1" placeholder="說明"/>
                       </div>
                     ) : (
@@ -762,10 +778,6 @@ function ClassInfoView({ isAdmin }) {
                   </div>
                 </div>
               ))}
-            </div>
-            <div className="mt-8 p-4 bg-yellow-50 rounded-lg flex items-start gap-3">
-              <span className="text-yellow-600 mt-0.5">⚠️</span>
-              <p className="text-sm text-yellow-800">為保護學生隱私，完整全班名單與聯絡方式，請登入<a href="https://check-scores-azure.vercel.app/" className="font-bold underline ml-1">智慧校園家長通</a>查看。</p>
             </div>
           </div>
         )}
