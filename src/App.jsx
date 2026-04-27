@@ -53,6 +53,14 @@ const processImageUrl = (url) => {
   return trimmedUrl;
 };
 
+// --- 輔助工具：取得 YouTube 影片 ID ---
+const getYouTubeVideoId = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
+
 // =========================================================================
 // ⭐⭐⭐ 老師請看這裡：預設資料區塊 ⭐⭐⭐
 // 下次只要在畫面上修改好，用「匯出」把 JSON 複製下來，直接覆蓋掉下方對應的陣列即可！
@@ -216,8 +224,15 @@ const INITIAL_PHOTOS = [
 
 // ⬇️ 預設【教學影片】
 const INITIAL_VIDEOS = [
-  { id: 1, title: '二次函數圖形解析 (重點複習)', duration: '15:20', views: 120 },
-  { id: 2, title: '相似形與三角比 - 基礎觀念', duration: '22:15', views: 85 },
+  { id: 1, title: '三分鐘學會一元二次方程式', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', videoId: 'dQw4w9WgXcQ' },
+  { id: 2, title: '幾何圖形基礎觀念', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', videoId: 'dQw4w9WgXcQ' },
+];
+
+// ⬇️ 預設【補充教材下載】
+const INITIAL_MATERIALS = [
+  { id: 1, title: '會考歷屆試題彙整 (幾何篇)', url: '#', ext: 'PDF' },
+  { id: 2, title: '公式記憶小卡', url: '#', ext: 'PDF' },
+  { id: 3, title: '課堂講義 CH3', url: '#', ext: 'DOC' },
 ];
 
 // ⬇️ 預設【榮譽榜】
@@ -262,13 +277,14 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
 }
 
 export default function App() {
-  // 全域狀態 (已將 awards 加入)
+  // 全域狀態
   const [appState, setAppState] = useState({
     heroBg: INITIAL_HERO_BG,
     photos: INITIAL_PHOTOS,
     schedule: INITIAL_SCHEDULE,
     roster: INITIAL_ROSTER,
     videos: INITIAL_VIDEOS,
+    materials: INITIAL_MATERIALS,
     awards: INITIAL_AWARDS
   });
 
@@ -298,7 +314,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // 監聽 Firebase 狀態 (若無 Firebase，則使用上方代碼寫死的初始值)
+  // 監聽 Firebase 狀態
   useEffect(() => {
     if (!db || !user) {
         setIsLoaded(true);
@@ -438,7 +454,7 @@ export default function App() {
         {activeTab === 'home' && <HomeView navigateTo={navigateTo} isAdmin={isAdmin} heroBg={appState.heroBg} photos={appState.photos} awards={appState.awards} updateAppState={updateAppState} ConfirmModal={ConfirmModal} />}
         {activeTab === 'photos' && <PhotosView isAdmin={isAdmin} ConfirmModal={ConfirmModal} photos={appState.photos} updateAppState={updateAppState} />}
         {activeTab === 'info' && <ClassInfoView isAdmin={isAdmin} schedule={appState.schedule} roster={appState.roster} updateAppState={updateAppState} />}
-        {activeTab === 'resources' && <ResourcesView isAdmin={isAdmin} ConfirmModal={ConfirmModal} videos={appState.videos} updateAppState={updateAppState} />}
+        {activeTab === 'resources' && <ResourcesView isAdmin={isAdmin} ConfirmModal={ConfirmModal} videos={appState.videos} materials={appState.materials} updateAppState={updateAppState} />}
         {activeTab === 'discussion' && <DiscussionView user={user} isAdmin={isAdmin} ConfirmModal={ConfirmModal} db={db} appId={appId} />}
       </main>
 
@@ -480,7 +496,6 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
   const [showEditBgModal, setShowEditBgModal] = useState(false);
   const [newHeroBg, setNewHeroBg] = useState('');
   
-  // 榮譽榜編輯狀態
   const [showAddAwardModal, setShowAddAwardModal] = useState(false);
   const [newAward, setNewAward] = useState({ date: '', title: '' });
   const [deleteAwardId, setDeleteAwardId] = useState(null);
@@ -630,7 +645,6 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
         </div>
       </div>
 
-      {/* Delete Award Confirm Modal */}
       <ConfirmModal 
         isOpen={deleteAwardId !== null} 
         title="刪除榮譽紀錄" 
@@ -639,7 +653,6 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
         onConfirm={confirmDeleteAward} 
       />
 
-      {/* Add Award Modal */}
       {showAddAwardModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -685,16 +698,6 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
     setNewPhoto({ title: '', url: '', date: '' });
   };
 
-  const triggerDelete = (e, id) => {
-    e.stopPropagation();
-    setDeleteConfirmId(id);
-  };
-
-  const confirmDeletePhoto = () => {
-    updateAppState({ photos: photos.filter(p => p.id !== deleteConfirmId) });
-    setDeleteConfirmId(null);
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in">
       <div className="text-center mb-12 relative">
@@ -726,7 +729,7 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
         ))}
       </div>
 
-      <ConfirmModal isOpen={deleteConfirmId !== null} title="刪除照片" message="確定要刪除這張照片嗎？刪除後無法復原。" onCancel={() => setDeleteConfirmId(null)} onConfirm={confirmDeletePhoto} />
+      <ConfirmModal isOpen={deleteConfirmId !== null} title="刪除照片" message="確定要刪除這張照片嗎？刪除後無法復原。" onCancel={() => setDeleteConfirmId(null)} onConfirm={() => { updateAppState({ photos: photos.filter(p => p.id !== deleteConfirmId) }); setDeleteConfirmId(null); }} />
 
       {showAddModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
@@ -770,9 +773,8 @@ function ClassInfoView({ isAdmin, schedule, roster, updateAppState }) {
   const [localRoster, setLocalRoster] = useState(roster);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 匯入/匯出控制
   const [showIOModal, setShowIOModal] = useState(false);
-  const [ioType, setIoType] = useState('schedule'); // 記錄當前是匯出課表還是名單
+  const [ioType, setIoType] = useState('schedule'); 
   const [ioText, setIoText] = useState('');
   const [ioError, setIoError] = useState('');
 
@@ -830,7 +832,7 @@ function ClassInfoView({ isAdmin, schedule, roster, updateAppState }) {
     textArea.focus();
     textArea.select();
     try { document.execCommand('copy'); alert('已複製到剪貼簿！'); } 
-    catch (err) { alert('複製失敗，請手動選取文字複製。'); }
+    catch (err) { alert('複製失敗，請手手動選取文字複製。'); }
     document.body.removeChild(textArea);
   };
 
@@ -926,7 +928,6 @@ function ClassInfoView({ isAdmin, schedule, roster, updateAppState }) {
         )}
       </div>
 
-      {/* Import/Export Modal */}
       {showIOModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
@@ -961,24 +962,51 @@ function ClassInfoView({ isAdmin, schedule, roster, updateAppState }) {
   );
 }
 
-function ResourcesView({ isAdmin, ConfirmModal, videos, updateAppState }) {
+function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppState }) {
+  // Video States
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
-  const [newVideoTitle, setNewVideoTitle] = useState('');
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [newVideo, setNewVideo] = useState({ title: '', url: '' });
+  const [deleteVideoId, setDeleteVideoId] = useState(null);
+
+  // Material States
+  const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
+  const [newMaterial, setNewMaterial] = useState({ title: '', url: '' });
+  const [deleteMaterialId, setDeleteMaterialId] = useState(null);
 
   const confirmAddVideo = () => {
-    if(newVideoTitle.trim()) {
-      const newVideos = [...videos, { id: Date.now(), title: newVideoTitle, duration: '00:00', views: 0 }];
+    if(newVideo.title.trim() && newVideo.url.trim()) {
+      const videoId = getYouTubeVideoId(newVideo.url);
+      const newVideos = [...videos, { id: Date.now(), title: newVideo.title, url: newVideo.url, videoId: videoId, views: 0 }];
       updateAppState({ videos: newVideos });
       setShowAddVideoModal(false);
-      setNewVideoTitle('');
+      setNewVideo({ title: '', url: '' });
     }
   };
 
   const confirmDeleteVideo = () => {
-    const newVideos = videos.filter(v => v.id !== deleteConfirmId);
-    updateAppState({ videos: newVideos });
-    setDeleteConfirmId(null);
+    updateAppState({ videos: videos.filter(v => v.id !== deleteVideoId) });
+    setDeleteVideoId(null);
+  };
+
+  const confirmAddMaterial = () => {
+    if(newMaterial.title.trim() && newMaterial.url.trim()) {
+      // 根據網址自動判斷副檔名標籤
+      let ext = 'LINK';
+      const urlUpper = newMaterial.url.toUpperCase();
+      if (urlUpper.includes('.PDF')) ext = 'PDF';
+      else if (urlUpper.includes('.DOC') || urlUpper.includes('DOCUMENT')) ext = 'DOC';
+      else if (urlUpper.includes('DRIVE.GOOGLE')) ext = 'DRIVE';
+
+      const newMats = [...materials, { id: Date.now(), title: newMaterial.title, url: newMaterial.url, ext }];
+      updateAppState({ materials: newMats });
+      setShowAddMaterialModal(false);
+      setNewMaterial({ title: '', url: '' });
+    }
+  };
+
+  const confirmDeleteMaterial = () => {
+    updateAppState({ materials: materials.filter(m => m.id !== deleteMaterialId) });
+    setDeleteMaterialId(null);
   };
 
   return (
@@ -989,6 +1017,7 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, updateAppState }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Videos Column */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative">
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-6"><PlayCircle className="text-red-500" /> 教學影片區</h3>
@@ -999,29 +1028,61 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, updateAppState }) {
             )}
             <div className="space-y-4">
               {videos.map((video) => (
-                <div key={video.id} className="flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-100 relative">
-                  <div className="relative w-32 md:w-40 aspect-video bg-gray-900 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
-                    <img src={`https://images.unsplash.com/photo-1632516643720-e7f0d7e6a727?auto=format&fit=crop&q=80&w=400&sig=${video.id}`} alt="thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                <div key={video.id} className="flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-100 relative">
+                  <a href={video.url} target="_blank" rel="noopener noreferrer" className="relative w-32 md:w-40 aspect-video bg-gray-900 rounded-lg overflow-hidden shrink-0 flex items-center justify-center group-hover:opacity-90">
+                    <img 
+                      src={video.videoId ? `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg` : `https://images.unsplash.com/photo-1632516643720-e7f0d7e6a727?auto=format&fit=crop&q=80&w=400&sig=${video.id}`} 
+                      alt="thumbnail" 
+                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" 
+                    />
                     <Play className="text-white w-8 h-8 opacity-80 group-hover:scale-110 transition-transform" />
-                    <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded">{video.duration}</span>
-                  </div>
+                  </a>
                   <div className="flex flex-col justify-center">
-                    <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">{video.title}</h4>
-                    <p className="text-xs text-gray-500 mt-2">觀看次數：{video.views} 次</p>
+                    <a href={video.url} target="_blank" rel="noopener noreferrer">
+                      <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">{video.title}</h4>
+                    </a>
                   </div>
                   {isAdmin && (
-                    <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(video.id); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-2"><Trash2 size={20}/></button>
+                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteVideoId(video.id); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={20}/></button>
                   )}
                 </div>
               ))}
+              {videos.length === 0 && <p className="text-sm text-gray-400 text-center py-4">目前尚無教學影片</p>}
             </div>
           </div>
         </div>
 
+        {/* Materials Column */}
         <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
+              <FileText className="text-blue-500" /> 補充教材下載
+            </h3>
+            {isAdmin && (
+              <button onClick={() => setShowAddMaterialModal(true)} className="absolute top-6 right-6 text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded-lg">
+                <Plus size={16}/>
+              </button>
+            )}
+            <div className="space-y-2">
+              {materials.map((file) => (
+                <div key={file.id} className="relative group">
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-blue-50 text-left transition-colors border border-transparent hover:border-blue-100">
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 truncate pr-8">{file.title}</span>
+                    <span className="text-[10px] font-bold px-2 py-1 bg-gray-100 text-gray-500 rounded group-hover:bg-blue-200 group-hover:text-blue-800 shrink-0">{file.ext}</span>
+                  </a>
+                  {isAdmin && (
+                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteMaterialId(file.id); }} className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Trash2 size={16}/>
+                    </button>
+                  )}
+                </div>
+              ))}
+              {materials.length === 0 && <p className="text-sm text-gray-400 text-center py-2">目前尚無補充教材</p>}
+            </div>
+          </div>
+          
           <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl shadow-md text-white relative">
             <h3 className="text-lg font-bold flex items-center gap-2 mb-4"><CheckSquare size={20} /> 本週作業與測驗</h3>
-            {isAdmin && <button className="absolute top-4 right-4 text-white/70 hover:text-white"><Edit2 size={16}/></button>}
             <ul className="space-y-3">
               <li className="flex items-start gap-2"><div className="mt-1 w-1.5 h-1.5 bg-yellow-400 rounded-full shrink-0"></div><p className="text-sm">完成習作 Ch3-1 (P.45~P.48)</p></li>
               <li className="flex items-start gap-2"><div className="mt-1 w-1.5 h-1.5 bg-yellow-400 rounded-full shrink-0"></div><p className="text-sm">線上測驗：二次函數基礎題</p></li>
@@ -1031,20 +1092,50 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, updateAppState }) {
         </div>
       </div>
 
-      <ConfirmModal isOpen={deleteConfirmId !== null} title="刪除影片" message="確定移除這部教學影片嗎？" onCancel={() => setDeleteConfirmId(null)} onConfirm={() => { updateAppState({ videos: videos.filter(v => v.id !== deleteConfirmId) }); setDeleteConfirmId(null); }} />
+      {/* Delete Modals */}
+      <ConfirmModal isOpen={deleteVideoId !== null} title="刪除影片" message="確定移除這部教學影片嗎？" onCancel={() => setDeleteVideoId(null)} onConfirm={confirmDeleteVideo} />
+      <ConfirmModal isOpen={deleteMaterialId !== null} title="刪除教材" message="確定移除這份補充教材嗎？" onCancel={() => setDeleteMaterialId(null)} onConfirm={confirmDeleteMaterial} />
 
+      {/* Add Video Modal */}
       {showAddVideoModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-xl font-bold mb-4">新增教學影片</h3>
+            <h3 className="text-xl font-bold mb-4">新增 YouTube 教學影片</h3>
             <div className="space-y-4">
               <div>
+                <label className="block text-sm text-gray-600 mb-1">YouTube 網址</label>
+                <input type="text" value={newVideo.url} onChange={e => setNewVideo({...newVideo, url: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://www.youtube.com/watch?v=..." />
+              </div>
+              <div>
                 <label className="block text-sm text-gray-600 mb-1">影片標題</label>
-                <input type="text" value={newVideoTitle} onChange={e => setNewVideoTitle(e.target.value)} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" value={newVideo.title} onChange={e => setNewVideo({...newVideo, title: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex gap-2 justify-end mt-6">
                 <button onClick={() => setShowAddVideoModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
                 <button onClick={confirmAddVideo} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">確認新增</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Material Modal */}
+      {showAddMaterialModal && (
+        <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold mb-4">新增補充教材連結</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">檔案連結 (URL)</label>
+                <input type="text" value={newMaterial.url} onChange={e => setNewMaterial({...newMaterial, url: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="貼上 Google 雲端硬碟或其他檔案連結" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">教材標題</label>
+                <input type="text" value={newMaterial.title} onChange={e => setNewMaterial({...newMaterial, title: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="例如：第三章 講義 PDF" />
+              </div>
+              <div className="flex gap-2 justify-end mt-6">
+                <button onClick={() => setShowAddMaterialModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
+                <button onClick={confirmAddMaterial} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">確認新增</button>
               </div>
             </div>
           </div>
