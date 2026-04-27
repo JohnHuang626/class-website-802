@@ -49,6 +49,10 @@ const INITIAL_ROSTER = [
   { id: 4, role: '學藝股長', name: '張雅婷', desc: '教室佈置、作業登記' },
   { id: 5, role: '衛生股長', name: '黃俊傑', desc: '整潔區域分配與檢查' },
   { id: 6, role: '體育股長', name: '劉宇軒', desc: '帶操、體育器材借還' },
+  { id: 7, role: '總務股長', name: '吳念真', desc: '負責班級經費收支與保管' },
+  { id: 8, role: '輔導股長', name: '許佳蓉', desc: '協助輔導活動與同學關懷' },
+  { id: 9, role: '圖書股長', name: '蔡子傑', desc: '負責班級圖書管理與借閱' },
+  { id: 10, role: '午餐秘書', name: '鄭心怡', desc: '負責營養午餐與餐桶歸還' },
 ];
 
 const INITIAL_VIDEOS = [
