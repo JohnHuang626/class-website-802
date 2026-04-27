@@ -411,7 +411,7 @@ export default function App() {
 // Views Components
 // ==========================================
 
-function HomeView({ navigateTo, isAdmin, heroBg, updateAppState }) {
+function HomeView({ navigateTo, isAdmin, heroBg, photos, updateAppState }) {
   const [showEditBgModal, setShowEditBgModal] = useState(false);
   const [newHeroBg, setNewHeroBg] = useState('');
 
@@ -552,9 +552,14 @@ function HomeView({ navigateTo, isAdmin, heroBg, updateAppState }) {
             </button>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {INITIAL_PHOTOS.slice(0, 2).map((photo) => (
+            {photos.slice(0, 2).map((photo) => (
               <div key={photo.id} className="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer" onClick={() => navigateTo('photos')}>
-                <img src={photo.url} alt={photo.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
+                <img 
+                  src={photo.url} 
+                  alt={photo.title} 
+                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" 
+                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                   <p className="text-white font-medium truncate">{photo.title}</p>
                 </div>
@@ -835,6 +840,7 @@ function ClassInfoView({ isAdmin, schedule, roster, updateAppState }) {
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
             班級資訊
+            {/* 根據不同分頁顯示不同的編輯按鈕組合 */}
             {isAdmin && activeTab === 'schedule' && (
                <div className="flex gap-2">
                  <button 
