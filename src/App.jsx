@@ -3,7 +3,8 @@ import {
   Menu, X, Home, Image as ImageIcon, BookOpen, Users, 
   MessageSquare, ExternalLink, Calendar, Award, PlayCircle, 
   FileText, CheckSquare, Send, User, ChevronRight, Play,
-  Smartphone, Lock, Plus, Edit2, Save, Trash2, AlertCircle
+  Smartphone, Lock, Plus, Edit2, Save, Trash2, AlertCircle,
+  Download, Copy
 } from 'lucide-react';
 
 // --- 強制載入 Tailwind CSS (確保在任何環境下都有樣式) ---
@@ -561,6 +562,11 @@ function ClassInfoView({ isAdmin }) {
   const [roster, setRoster] = useState(INITIAL_ROSTER);
   const [isEditing, setIsEditing] = useState(false);
 
+  // --- 匯入/匯出狀態 ---
+  const [showIOModal, setShowIOModal] = useState(false);
+  const [ioText, setIoText] = useState('');
+  const [ioError, setIoError] = useState('');
+
   const handleScheduleChange = (id, field, value) => {
     setSchedule(schedule.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
@@ -569,18 +575,83 @@ function ClassInfoView({ isAdmin }) {
     setRoster(roster.map(student => student.id === id ? { ...student, [field]: value } : student));
   };
 
+  // --- 匯入/匯出邏輯 ---
+  const handleOpenIO = () => {
+    setIoText(JSON.stringify(schedule, null, 2));
+    setIoError('');
+    setShowIOModal(true);
+  };
+
+  const handleImport = () => {
+    try {
+      const parsed = JSON.parse(ioText);
+      if (!Array.isArray(parsed)) throw new Error('資料必須是陣列格式');
+      // 簡易檢查是否有正確的 key
+      if (parsed.length > 0 && !('mon' in parsed[0] && 'time' in parsed[0])) {
+         throw new Error('欄位不正確');
+      }
+      setSchedule(parsed);
+      setShowIOModal(false);
+      alert('課表匯入成功！');
+    } catch (err) {
+      setIoError('資料格式有誤，請確認是否為標準的 JSON 格式！');
+    }
+  };
+
+  const handleCopy = () => {
+    try {
+      navigator.clipboard.writeText(ioText).then(() => {
+        alert('已複製到剪貼簿！');
+      }).catch(err => fallbackCopyTextToClipboard(ioText));
+    } catch (err) {
+      fallbackCopyTextToClipboard(ioText);
+    }
+  };
+
+  const fallbackCopyTextToClipboard = (text) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      alert('已複製到剪貼簿！');
+    } catch (err) {
+      alert('複製失敗，請手動選取文字複製。');
+    }
+    document.body.removeChild(textArea);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
             班級資訊
-            {isAdmin && (
+            {/* 根據不同分頁顯示不同的編輯按鈕組合 */}
+            {isAdmin && activeTab === 'schedule' && (
+               <div className="flex gap-2">
+                 <button 
+                  onClick={handleOpenIO}
+                  className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                 >
+                   <Download size={16}/> 匯入/匯出
+                 </button>
+                 <button 
+                  onClick={() => setIsEditing(!isEditing)}
+                  className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${isEditing ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                 >
+                  {isEditing ? <><Save size={16}/> 儲存變更</> : <><Edit2 size={16}/> 編輯內容</>}
+                 </button>
+               </div>
+            )}
+            {isAdmin && activeTab === 'roster' && (
                <button 
                 onClick={() => setIsEditing(!isEditing)}
                 className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${isEditing ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
-                {isEditing ? <><Save size={16}/> 儲存變更</> : <><Edit2 size={16}/> 編輯內容</>}
+                {isEditing ? <><Save size={16}/> 儲存變更</> : <><Edit2 size={16}/> 編輯名單</>}
               </button>
             )}
           </h2>
@@ -676,6 +747,41 @@ function ClassInfoView({ isAdmin }) {
           </div>
         )}
       </div>
+
+      {/* Import/Export Modal */}
+      {showIOModal && (
+        <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
+            <h3 className="text-xl font-bold mb-2">匯入 / 匯出課表</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              您可以在此複製目前的課表資料備份，或是貼上修改好的 JSON 格式資料進行整筆匯入。<br/>
+              <span className="text-blue-600 font-medium">💡 小提醒：請保持原有 JSON 的屬性結構 (如 time, mon, tue, wed...) 以確保網頁正常解析。</span>
+            </p>
+            
+            <div className="flex-1 overflow-hidden flex flex-col min-h-[300px]">
+              <textarea 
+                className="w-full flex-1 p-4 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                value={ioText}
+                onChange={(e) => setIoText(e.target.value)}
+                spellCheck="false"
+              />
+            </div>
+            
+            {ioError && <p className="text-red-500 text-sm mt-3 font-medium">{ioError}</p>}
+            
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
+              <button onClick={() => setShowIOModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
+              <button onClick={handleCopy} className="px-4 py-2 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-900 flex items-center gap-1">
+                <Copy size={16}/> 複製內容
+              </button>
+              <button onClick={handleImport} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">
+                儲存匯入
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
