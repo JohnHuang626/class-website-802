@@ -7,6 +7,10 @@ import {
   Download, Copy
 } from 'lucide-react';
 
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from 'firebase/firestore';
+
 // --- 強制載入 Tailwind CSS (確保在任何環境下都有樣式) ---
 if (typeof window !== 'undefined' && !document.getElementById('tailwind-cdn')) {
   const script = document.createElement('script');
@@ -15,27 +19,53 @@ if (typeof window !== 'undefined' && !document.getElementById('tailwind-cdn')) {
   document.head.appendChild(script);
 }
 
+// ==========================================
+// ⚠️ Firebase 初始化 (請在這裡貼上您的金鑰)
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyB_XxMKi1clOZo8nEJohR64rNhTBfzLqoA",
+  authDomain: "class-website-802.firebaseapp.com",
+  projectId: "class-website-802",
+  storageBucket: "class-website-802.firebasestorage.app",
+  messagingSenderId: "448378354222",
+  appId: "1:448378354222:web:57443ae89e6bfda44cfdbf"
+};
+
+let app, auth, db;
+try {
+  // 只有當您填入了金鑰 (有屬性時)，才會啟動 Firebase 連線
+  if (Object.keys(firebaseConfig).length > 0) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  }
+} catch(e) { 
+  console.error("Firebase init error", e); 
+}
+
+const appId = 'class-website-802-prod';
+
 // --- 輔助工具：自動轉換 Google Drive 連結為圖片直連網址 ---
 const processImageUrl = (url) => {
   if (!url) return '';
   const trimmedUrl = url.trim();
-  // 檢查是否為 Google Drive 的一般分享連結
   const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
   const match = trimmedUrl.match(driveRegex);
   
   if (match && match[1]) {
-    // 轉換為 Google 官方的直連圖片格式 (lh3.googleusercontent.com)
     return `https://lh3.googleusercontent.com/d/${match[1]}`;
   }
   return trimmedUrl;
 };
 
-// --- Mock Data ---
+// --- Mock Data (預設資料) ---
 const CLASS_INFO = {
   name: "八年2班 師生天地",
   slogan: "邏輯思考，探索無限可能",
   teacher: "John 老師"
 };
+
+const INITIAL_HERO_BG = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=2000';
 
 const INITIAL_PHOTOS = [
   { id: 1, url: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800', title: '校慶運動會大隊接力', date: '2025-11-15' },
@@ -117,9 +147,19 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
 
 // --- Main Application Component ---
 export default function App() {
+  // 全域雲端狀態
+  const [appState, setAppState] = useState({
+    heroBg: INITIAL_HERO_BG,
+    photos: INITIAL_PHOTOS,
+    schedule: INITIAL_SCHEDULE,
+    roster: INITIAL_ROSTER,
+    videos: INITIAL_VIDEOS
+  });
+
   const [activeTab, setActiveTab] = useState('home');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   // Admin State
   const [isAdmin, setIsAdmin] = useState(false);
@@ -127,13 +167,62 @@ export default function App() {
   const [adminPwd, setAdminPwd] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // 模擬使用者狀態
-  const [user, setUser] = useState({ uid: 'guest-123' });
-  
+  // User Auth State
+  const [user, setUser] = useState(null);
+
+  // 初始化 Firebase 認證
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+    if (!auth) {
+       setUser({ uid: 'local-user' }); 
+       setIsLoaded(true);
+       return;
+    }
+    const initAuth = async () => {
+      try {
+        await signInAnonymously(auth);
+      } catch(e) { console.error(e); }
     };
+    initAuth();
+    const unsub = onAuthStateChanged(auth, setUser);
+    return () => unsub();
+  }, []);
+
+  // 監聽全域雲端狀態 (僅管理員可編輯的資料)
+  useEffect(() => {
+    if (!db || !user) {
+        setIsLoaded(true);
+        return;
+    }
+    const docRef = doc(db, 'class_data', appId);
+    const unsub = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setAppState(prev => ({...prev, ...docSnap.data()}));
+        } else {
+            // 初次連線若無資料，寫入預設資料
+            setDoc(docRef, appState);
+        }
+        setIsLoaded(true);
+    }, (err) => {
+        console.error(err);
+        setIsLoaded(true);
+    });
+    return () => unsub();
+  }, [user]);
+
+  // 共用存檔函式
+  const updateAppState = async (newPartialState) => {
+    const newState = { ...appState, ...newPartialState };
+    setAppState(newState); // 樂觀更新前端畫面
+    if (db && user) {
+       try {
+         const docRef = doc(db, 'class_data', appId);
+         await setDoc(docRef, newState, { merge: true });
+       } catch(e) { console.error("Save error", e); }
+    }
+  };
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -146,9 +235,9 @@ export default function App() {
 
   const handleAdminLoginClick = () => {
     if (isAdmin) {
-      setIsAdmin(false); // 登出
+      setIsAdmin(false);
     } else {
-      setShowLoginModal(true); // 打開登入視窗
+      setShowLoginModal(true);
       setAdminPwd('');
       setLoginError('');
     }
@@ -170,6 +259,10 @@ export default function App() {
     { id: 'resources', label: '學習資源', icon: <BookOpen size={20} /> },
     { id: 'discussion', label: '留言板', icon: <MessageSquare size={20} /> },
   ];
+
+  if (!isLoaded) {
+    return <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div></div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-gray-800 font-sans selection:bg-blue-200 flex flex-col">
@@ -258,11 +351,11 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="pt-24 pb-20 md:pb-12 flex-grow">
-        {activeTab === 'home' && <HomeView navigateTo={navigateTo} isAdmin={isAdmin} />}
-        {activeTab === 'photos' && <PhotosView isAdmin={isAdmin} ConfirmModal={ConfirmModal} />}
-        {activeTab === 'info' && <ClassInfoView isAdmin={isAdmin} />}
-        {activeTab === 'resources' && <ResourcesView isAdmin={isAdmin} ConfirmModal={ConfirmModal} />}
-        {activeTab === 'discussion' && <DiscussionView user={user} isAdmin={isAdmin} ConfirmModal={ConfirmModal} />}
+        {activeTab === 'home' && <HomeView navigateTo={navigateTo} isAdmin={isAdmin} heroBg={appState.heroBg} photos={appState.photos} updateAppState={updateAppState} />}
+        {activeTab === 'photos' && <PhotosView isAdmin={isAdmin} ConfirmModal={ConfirmModal} photos={appState.photos} updateAppState={updateAppState} />}
+        {activeTab === 'info' && <ClassInfoView isAdmin={isAdmin} schedule={appState.schedule} roster={appState.roster} updateAppState={updateAppState} />}
+        {activeTab === 'resources' && <ResourcesView isAdmin={isAdmin} ConfirmModal={ConfirmModal} videos={appState.videos} updateAppState={updateAppState} />}
+        {activeTab === 'discussion' && <DiscussionView user={user} isAdmin={isAdmin} ConfirmModal={ConfirmModal} db={db} appId={appId} />}
       </main>
 
       {/* Footer */}
@@ -318,8 +411,7 @@ export default function App() {
 // Views Components
 // ==========================================
 
-function HomeView({ navigateTo, isAdmin }) {
-  const [heroBg, setHeroBg] = useState('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=2000');
+function HomeView({ navigateTo, isAdmin, heroBg, updateAppState }) {
   const [showEditBgModal, setShowEditBgModal] = useState(false);
   const [newHeroBg, setNewHeroBg] = useState('');
 
@@ -330,9 +422,8 @@ function HomeView({ navigateTo, isAdmin }) {
 
   const confirmChangeBg = () => {
     if (newHeroBg.trim()) {
-      // 處理網址 (自動轉換 Google Drive 連結)
       const processedUrl = processImageUrl(newHeroBg);
-      setHeroBg(processedUrl);
+      updateAppState({ heroBg: processedUrl });
     }
     setShowEditBgModal(false);
   };
@@ -341,7 +432,6 @@ function HomeView({ navigateTo, isAdmin }) {
     <div className="animate-in fade-in duration-500">
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        {/* 背景加上深色底 (bg-gray-900) 配合照片淡化 (opacity-40) */}
         <div className="relative rounded-3xl overflow-hidden shadow-2xl h-[400px] md:h-[500px] group bg-gray-900">
           
           {/* Admin Edit Button */}
@@ -359,8 +449,8 @@ function HomeView({ navigateTo, isAdmin }) {
           <img 
             src={heroBg} 
             alt="Hero Class" 
-            /* 照片淡化 opacity-40 讓前方文字更清晰 */
             className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-1000 opacity-40"
+            onError={(e) => { e.target.src = INITIAL_HERO_BG; }}
           />
           
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/20 to-transparent flex flex-col justify-end p-8 md:p-12">
@@ -374,7 +464,6 @@ function HomeView({ navigateTo, isAdmin }) {
               記錄孩子們的成長點滴，提供豐富的數學學習資源，建立親師溝通的優質橋樑。
             </p>
             
-            {/* CTA for Parent Portal */}
             <a 
               href="https://check-scores-azure.vercel.app/" 
               target="_blank" 
@@ -508,8 +597,7 @@ function HomeView({ navigateTo, isAdmin }) {
   );
 }
 
-function PhotosView({ isAdmin, ConfirmModal }) {
-  const [photos, setPhotos] = useState(INITIAL_PHOTOS);
+function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPhoto, setNewPhoto] = useState({ title: '', url: '', date: '' });
@@ -517,17 +605,14 @@ function PhotosView({ isAdmin, ConfirmModal }) {
 
   const handleAddPhoto = () => {
     if(!newPhoto.url || !newPhoto.title) return;
-    
-    // 自動轉換 Google Drive 連結
     const processedUrl = processImageUrl(newPhoto.url);
-    
     const photo = {
       ...newPhoto,
       url: processedUrl,
       id: Date.now(),
       date: newPhoto.date || new Date().toISOString().split('T')[0]
     };
-    setPhotos([photo, ...photos]);
+    updateAppState({ photos: [photo, ...photos] });
     setShowAddModal(false);
     setNewPhoto({ title: '', url: '', date: '' });
   };
@@ -538,7 +623,7 @@ function PhotosView({ isAdmin, ConfirmModal }) {
   };
 
   const confirmDeletePhoto = () => {
-    setPhotos(photos.filter(p => p.id !== deleteConfirmId));
+    updateAppState({ photos: photos.filter(p => p.id !== deleteConfirmId) });
     setDeleteConfirmId(null);
   };
 
@@ -664,10 +749,10 @@ function PhotosView({ isAdmin, ConfirmModal }) {
   );
 }
 
-function ClassInfoView({ isAdmin }) {
+function ClassInfoView({ isAdmin, schedule, roster, updateAppState }) {
   const [activeTab, setActiveTab] = useState('schedule');
-  const [schedule, setSchedule] = useState(INITIAL_SCHEDULE);
-  const [roster, setRoster] = useState(INITIAL_ROSTER);
+  const [localSchedule, setLocalSchedule] = useState(schedule);
+  const [localRoster, setLocalRoster] = useState(roster);
   const [isEditing, setIsEditing] = useState(false);
 
   // --- 匯入/匯出狀態 ---
@@ -675,17 +760,30 @@ function ClassInfoView({ isAdmin }) {
   const [ioText, setIoText] = useState('');
   const [ioError, setIoError] = useState('');
 
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalSchedule(schedule);
+      setLocalRoster(roster);
+    }
+  }, [schedule, roster, isEditing]);
+
+  const toggleEdit = () => {
+    if (isEditing) {
+      updateAppState({ schedule: localSchedule, roster: localRoster });
+    }
+    setIsEditing(!isEditing);
+  };
+
   const handleScheduleChange = (id, field, value) => {
-    setSchedule(schedule.map(row => row.id === id ? { ...row, [field]: value } : row));
+    setLocalSchedule(localSchedule.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
 
   const handleRosterChange = (id, field, value) => {
-    setRoster(roster.map(student => student.id === id ? { ...student, [field]: value } : student));
+    setLocalRoster(localRoster.map(student => student.id === id ? { ...student, [field]: value } : student));
   };
 
-  // --- 匯入/匯出邏輯 ---
   const handleOpenIO = () => {
-    setIoText(JSON.stringify(schedule, null, 2));
+    setIoText(JSON.stringify(localSchedule, null, 2));
     setIoError('');
     setShowIOModal(true);
   };
@@ -694,13 +792,13 @@ function ClassInfoView({ isAdmin }) {
     try {
       const parsed = JSON.parse(ioText);
       if (!Array.isArray(parsed)) throw new Error('資料必須是陣列格式');
-      // 簡易檢查是否有正確的 key
       if (parsed.length > 0 && !('mon' in parsed[0] && 'time' in parsed[0])) {
          throw new Error('欄位不正確');
       }
-      setSchedule(parsed);
+      setLocalSchedule(parsed);
+      updateAppState({ schedule: parsed });
       setShowIOModal(false);
-      alert('課表匯入成功！');
+      alert('課表匯入成功並已儲存！');
     } catch (err) {
       setIoError('資料格式有誤，請確認是否為標準的 JSON 格式！');
     }
@@ -737,7 +835,6 @@ function ClassInfoView({ isAdmin }) {
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
             班級資訊
-            {/* 根據不同分頁顯示不同的編輯按鈕組合 */}
             {isAdmin && activeTab === 'schedule' && (
                <div className="flex gap-2">
                  <button 
@@ -747,7 +844,7 @@ function ClassInfoView({ isAdmin }) {
                    <Download size={16}/> 匯入/匯出
                  </button>
                  <button 
-                  onClick={() => setIsEditing(!isEditing)}
+                  onClick={toggleEdit}
                   className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${isEditing ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                  >
                   {isEditing ? <><Save size={16}/> 儲存變更</> : <><Edit2 size={16}/> 編輯內容</>}
@@ -756,7 +853,7 @@ function ClassInfoView({ isAdmin }) {
             )}
             {isAdmin && activeTab === 'roster' && (
                <button 
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={toggleEdit}
                 className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${isEditing ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
                 {isEditing ? <><Save size={16}/> 儲存變更</> : <><Edit2 size={16}/> 編輯名單</>}
@@ -796,7 +893,7 @@ function ClassInfoView({ isAdmin }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {schedule.map((row, idx) => (
+                {localSchedule.map((row, idx) => (
                   <React.Fragment key={row.id}>
                     {idx === 4 && (
                       <tr className="bg-blue-50/50">
@@ -836,7 +933,7 @@ function ClassInfoView({ isAdmin }) {
         {activeTab === 'roster' && (
           <div className="p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {roster.map((student) => (
+              {localRoster.map((student) => (
                 <div key={student.id} className={`flex items-center gap-4 p-4 rounded-xl border transition-colors group ${isEditing ? 'border-blue-300 bg-blue-50/20' : 'border-gray-100 hover:border-blue-200 hover:bg-blue-50/50'}`}>
                   <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 shrink-0">
                     <User size={24} />
@@ -909,22 +1006,23 @@ function ClassInfoView({ isAdmin }) {
   );
 }
 
-function ResourcesView({ isAdmin, ConfirmModal }) {
-  const [videos, setVideos] = useState(INITIAL_VIDEOS);
+function ResourcesView({ isAdmin, ConfirmModal, videos, updateAppState }) {
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
   const [newVideoTitle, setNewVideoTitle] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const confirmAddVideo = () => {
     if(newVideoTitle.trim()) {
-      setVideos([...videos, { id: Date.now(), title: newVideoTitle, duration: '00:00', views: 0 }]);
+      const newVideos = [...videos, { id: Date.now(), title: newVideoTitle, duration: '00:00', views: 0 }];
+      updateAppState({ videos: newVideos });
       setShowAddVideoModal(false);
       setNewVideoTitle('');
     }
   };
 
   const confirmDeleteVideo = () => {
-    setVideos(videos.filter(v => v.id !== deleteConfirmId));
+    const newVideos = videos.filter(v => v.id !== deleteConfirmId);
+    updateAppState({ videos: newVideos });
     setDeleteConfirmId(null);
   };
 
@@ -1057,19 +1155,41 @@ function ResourcesView({ isAdmin, ConfirmModal }) {
   );
 }
 
-function DiscussionView({ user, isAdmin, ConfirmModal }) {
-  const [messages, setMessages] = useState([
-    { id: '1', text: '老師好，請問明天的數學小考範圍是哪裡？', author: '學生', role: 'student', time: '18:30' },
-    { id: '2', text: '明天考第三章 3-1 到 3-2 喔！大家加油！', author: 'John 老師', role: 'teacher', time: '18:45' }
-  ]);
+function DiscussionView({ user, isAdmin, ConfirmModal, db, appId }) {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [role, setRole] = useState(isAdmin ? 'teacher' : 'student'); 
   const [customName, setCustomName] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const messagesEndRef = useRef(null);
 
+  // 初始化取得留言資料
   useEffect(() => {
-    // 若切換管理員模式，自動幫忙切換發言身分
+    if (!db || !user) {
+      // 離線預設展示資料
+      setMessages([
+        { id: '1', text: '老師好，請問明天的數學小考範圍是哪裡？', author: '學生', role: 'student', time: '18:30', timestamp: 1 },
+        { id: '2', text: '明天考第三章 3-1 到 3-2 喔！大家加油！', author: 'John 老師', role: 'teacher', time: '18:45', timestamp: 2 }
+      ]);
+      setLoading(false);
+      return;
+    }
+
+    const ref = collection(db, 'class_messages', appId, 'posts');
+    const unsub = onSnapshot(ref, (snap) => {
+        const msgs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        msgs.sort((a,b) => a.timestamp - b.timestamp);
+        setMessages(msgs);
+        setLoading(false);
+    }, (err) => {
+        console.error(err);
+        setLoading(false);
+    });
+    return () => unsub();
+  }, [user, db, appId]);
+
+  useEffect(() => {
     if(isAdmin) setRole('teacher');
   }, [isAdmin]);
 
@@ -1081,27 +1201,35 @@ function DiscussionView({ user, isAdmin, ConfirmModal }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
 
     const displayName = customName.trim() || (role === 'teacher' ? 'John 老師' : (role === 'parent' ? '家長' : '學生'));
     
     const newMsg = {
-      id: Date.now().toString(),
       text: newMessage.trim(),
       userId: user.uid,
       author: displayName,
       role: role,
-      time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      timestamp: Date.now()
     };
 
-    setMessages([...messages, newMsg]);
+    if (db) {
+       await addDoc(collection(db, 'class_messages', appId, 'posts'), newMsg);
+    } else {
+       setMessages([...messages, { id: Date.now().toString(), ...newMsg }]); 
+    }
     setNewMessage(''); 
   };
 
-  const confirmDeleteMsg = () => {
-    setMessages(messages.filter(m => m.id !== deleteConfirmId));
+  const confirmDeleteMsg = async () => {
+    if (db) {
+        await deleteDoc(doc(db, 'class_messages', appId, 'posts', deleteConfirmId));
+    } else {
+        setMessages(messages.filter(m => m.id !== deleteConfirmId));
+    }
     setDeleteConfirmId(null);
   };
 
@@ -1150,7 +1278,9 @@ function DiscussionView({ user, isAdmin, ConfirmModal }) {
         
         {/* Messages List */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-          {messages.length === 0 ? (
+          {loading ? (
+             <div className="h-full flex items-center justify-center text-gray-400">載入留言中...</div>
+          ) : messages.length === 0 ? (
             <div className="h-full flex items-center justify-center text-gray-400">
               目前還沒有留言，來當第一個發言的人吧！
             </div>
