@@ -32,14 +32,22 @@ const INITIAL_PHOTOS = [
 ];
 
 const INITIAL_SCHEDULE = [
-  { id: 1, time: '08:25 - 09:10', mon: '國文', tue: '數學', wed: '英文', thu: '理化', fri: '數學' },
-  { id: 2, time: '09:20 - 10:05', mon: '數學', tue: '英文', wed: '理化', thu: '體育', fri: '國文' },
-  { id: 3, time: '10:15 - 11:00', mon: '英文', tue: '歷史', wed: '數學', thu: '公民', fri: '音樂' },
-  { id: 4, time: '11:10 - 11:55', mon: '地理', tue: '國文', wed: '體育', thu: '數學', fri: '美術' },
-  { id: 5, time: '13:20 - 14:05', mon: '理化', tue: '童軍', wed: '社團', thu: '英文', fri: '班會' },
-  { id: 6, time: '14:15 - 15:00', mon: '輔導', tue: '理化', wed: '社團', thu: '國文', fri: '綜合' },
+  { id: 1, time: '08:25 - 09:10', mon: '國文', tue: '數學', wed: '英語', thu: '自然', fri: '數學' },
+  { id: 2, time: '09:20 - 10:05', mon: '數學', tue: '英語', wed: '自然', thu: '體育', fri: '國文' },
+  { id: 3, time: '10:15 - 11:00', mon: '英語', tue: '歷史', wed: '數學', thu: '公民', fri: '音樂' },
+  { id: 4, time: '11:10 - 11:55', mon: '地理', tue: '國文', wed: '體育', thu: '數學', fri: '視覺' },
+  { id: 5, time: '13:20 - 14:05', mon: '自然', tue: '童軍', wed: '社團', thu: '英語', fri: '班會' },
+  { id: 6, time: '14:15 - 15:00', mon: '輔導', tue: '自然', wed: '社團', thu: '國文', fri: '綜合' },
   { id: 7, time: '15:15 - 16:00', mon: '自習', tue: '自習', wed: '自習', thu: '自習', fri: '大掃除' },
   { id: 8, time: '16:10 - 16:55', mon: '自習', tue: '自習', wed: '自習', thu: '自習', fri: '大掃除' }
+];
+
+const SUBJECTS = [
+  '國文', '英語', '數學', '自然', '地理', '歷史', '公民', '社會', 
+  '體育', '音樂', '科技', '社團', '彈英', '彈自', '彈數', '輔導', 
+  '資訊', '童軍', '表演', '健康', '本土語', '家政', '班會', '視覺',
+  // 配合預設課表與常見需求保留
+  '綜合', '自習', '大掃除'
 ];
 
 const INITIAL_ROSTER = [
@@ -702,14 +710,24 @@ function ClassInfoView({ isAdmin }) {
                     )}
                     <tr className="hover:bg-gray-50 transition-colors">
                       <td className="py-4 px-2 text-sm text-gray-500 bg-gray-50/50">
-                         {isEditing ? <input value={row.time} onChange={e=>handleScheduleChange(row.id, 'time', e.target.value)} className="w-full text-center border rounded p-1"/> : row.time}
+                         {isEditing ? <input value={row.time} onChange={e=>handleScheduleChange(row.id, 'time', e.target.value)} className="w-full text-center border rounded p-1 focus:ring-2 focus:ring-blue-500 outline-none"/> : row.time}
                       </td>
                       {['mon', 'tue', 'wed', 'thu', 'fri'].map(day => (
                         <td key={day} className={`py-4 px-2 font-medium ${!isEditing && row[day] === '數學' ? 'text-blue-600 font-bold bg-blue-50/30' : 'text-gray-800'}`}>
-                           {isEditing ? 
-                              <input value={row[day]} onChange={e=>handleScheduleChange(row.id, day, e.target.value)} className="w-full text-center border rounded p-1"/> 
-                              : row[day]
-                           }
+                           {isEditing ? (
+                              <select 
+                                value={row[day]} 
+                                onChange={e => handleScheduleChange(row.id, day, e.target.value)} 
+                                className="w-full text-center border rounded p-1 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                              >
+                                <option value=""></option>
+                                {SUBJECTS.map(sub => (
+                                  <option key={sub} value={sub}>{sub}</option>
+                                ))}
+                              </select>
+                           ) : (
+                              row[day]
+                           )}
                         </td>
                       ))}
                     </tr>
