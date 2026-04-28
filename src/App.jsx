@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Menu, X, Home, Image as ImageIcon, BookOpen, Users, 
-  MessageSquare, ExternalLink, Calendar, Award, PlayCircle, 
-  FileText, CheckSquare, Send, User, ChevronRight, Play,
+  ExternalLink, Calendar, Award, PlayCircle, 
+  FileText, CheckSquare, User, ChevronRight, Play,
   Smartphone, Lock, Plus, Edit2, Save, Trash2, AlertCircle,
-  Download, Copy
+  Download, Copy, Newspaper, Tag, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // --- 強制載入 Tailwind CSS ---
 if (typeof window !== 'undefined' && !document.getElementById('tailwind-cdn')) {
@@ -76,142 +76,28 @@ const INITIAL_HERO_BG = 'https://images.unsplash.com/photo-1523050854058-8df9011
 
 // ⬇️ 預設【課表】
 const INITIAL_SCHEDULE = [
-  {
-    "fri": "班會",
-    "thu": "英語",
-    "id": 1,
-    "wed": "彈自",
-    "tue": "國文",
-    "mon": "國文",
-    "time": "08:25 - 09:10"
-  },
-  {
-    "tue": "國文",
-    "mon": "國文",
-    "time": "09:20 - 10:05",
-    "fri": "英語",
-    "thu": "健康",
-    "id": 2,
-    "wed": "英語"
-  },
-  {
-    "id": 3,
-    "wed": "資訊",
-    "fri": "自然",
-    "thu": "本土語",
-    "mon": "自然",
-    "time": "10:15 - 11:00",
-    "tue": "數學"
-  },
-  {
-    "time": "11:10 - 11:55",
-    "mon": "體育",
-    "tue": "音樂",
-    "wed": "公民",
-    "id": 4,
-    "thu": "自然",
-    "fri": "歷史"
-  },
-  {
-    "tue": "科技",
-    "time": "13:20 - 14:05",
-    "mon": "地理",
-    "thu": "家政",
-    "fri": "視覺",
-    "wed": "輔導",
-    "id": 5
-  },
-  {
-    "wed": "童軍",
-    "id": 6,
-    "thu": "數學",
-    "fri": "數學",
-    "time": "14:15 - 15:00",
-    "mon": "彈英",
-    "tue": "社團"
-  },
-  {
-    "time": "15:15 - 16:00",
-    "mon": "數學",
-    "tue": "社團",
-    "wed": "表演",
-    "id": 7,
-    "thu": "體育",
-    "fri": "國文"
-  },
-  {
-    "tue": "數學",
-    "time": "16:10 - 16:55",
-    "mon": "社會",
-    "thu": "英語",
-    "fri": "國文",
-    "wed": "自然",
-    "id": 8
-  }
+  { "fri": "班會", "thu": "英語", "id": 1, "wed": "彈自", "tue": "國文", "mon": "國文", "time": "08:25 - 09:10" },
+  { "tue": "國文", "mon": "國文", "time": "09:20 - 10:05", "fri": "英語", "thu": "健康", "id": 2, "wed": "英語" },
+  { "id": 3, "wed": "資訊", "fri": "自然", "thu": "本土語", "mon": "自然", "time": "10:15 - 11:00", "tue": "數學" },
+  { "time": "11:10 - 11:55", "mon": "體育", "tue": "音樂", "wed": "公民", "id": 4, "thu": "自然", "fri": "歷史" },
+  { "tue": "科技", "time": "13:20 - 14:05", "mon": "地理", "thu": "家政", "fri": "視覺", "wed": "輔導", "id": 5 },
+  { "wed": "童軍", "id": 6, "thu": "數學", "fri": "數學", "time": "14:15 - 15:00", "mon": "彈英", "tue": "社團" },
+  { "time": "15:15 - 16:00", "mon": "數學", "tue": "社團", "wed": "表演", "id": 7, "thu": "體育", "fri": "國文" },
+  { "tue": "數學", "time": "16:10 - 16:55", "mon": "社會", "thu": "英語", "fri": "國文", "wed": "自然", "id": 8 }
 ];
 
 // ⬇️ 預設【班級幹部】
 const INITIAL_ROSTER = [
-  {
-    "id": 1,
-    "role": "班長",
-    "name": "楊子易",
-    "desc": "負責統籌班級事務"
-  },
-  {
-    "desc": "協助班長，點名簿管理",
-    "role": "副班長",
-    "name": "江筠苡",
-    "id": 2
-  },
-  {
-    "desc": "維持班級秩序",
-    "role": "風紀股長",
-    "id": 3,
-    "name": "楊淯淋"
-  },
-  {
-    "desc": "教室佈置、作業登記",
-    "name": "黃苡欣",
-    "id": 4,
-    "role": "學藝股長"
-  },
-  {
-    "name": "張喻喬",
-    "id": 5,
-    "role": "衛生股長",
-    "desc": "整潔區域檢查與維持"
-  },
-  {
-    "desc": "帶操、體育器材借還",
-    "name": "劉東勳",
-    "role": "體育股長",
-    "id": 6
-  },
-  {
-    "role": "總務股長",
-    "name": "方泊淳",
-    "id": 7,
-    "desc": "負責班級經物品保管及維護"
-  },
-  {
-    "role": "輔導股長",
-    "name": "吳欣諭",
-    "id": 8,
-    "desc": "協助輔導活動與同學關懷"
-  },
-  {
-    "id": 9,
-    "name": "張晴瑜",
-    "role": "圖書股長",
-    "desc": "負責班級圖書管理與借閱"
-  },
-  {
-    "desc": "負責營養午餐工作事項",
-    "name": "謝玉茹",
-    "role": "午餐秘書",
-    "id": 10
-  }
+  { "id": 1, "role": "班長", "name": "楊子易", "desc": "負責統籌班級事務" },
+  { "desc": "協助班長，點名簿管理", "role": "副班長", "name": "江筠苡", "id": 2 },
+  { "desc": "維持班級秩序", "role": "風紀股長", "id": 3, "name": "楊淯淋" },
+  { "desc": "教室佈置、作業登記", "name": "黃苡欣", "id": 4, "role": "學藝股長" },
+  { "name": "張喻喬", "id": 5, "role": "衛生股長", "desc": "整潔區域檢查與維持" },
+  { "desc": "帶操、體育器材借還", "name": "劉東勳", "role": "體育股長", "id": 6 },
+  { "role": "總務股長", "name": "方泊淳", "id": 7, "desc": "負責班級經物品保管及維護" },
+  { "role": "輔導股長", "name": "吳欣諭", "id": 8, "desc": "協助輔導活動與同學關懷" },
+  { "id": 9, "name": "張晴瑜", "role": "圖書股長", "desc": "負責班級圖書管理與借閱" },
+  { "desc": "負責營養午餐工作事項", "name": "謝玉茹", "role": "午餐秘書", "id": 10 }
 ];
 
 // ⬇️ 預設【活動照片】
@@ -239,6 +125,26 @@ const INITIAL_MATERIALS = [
 const INITIAL_AWARDS = [
   { id: 1, date: '2026-04', title: '全校運動會 精神總錦標 第一名' },
   { id: 2, date: '2026-03', title: '生活榮譽競賽 連續三週 冠軍' },
+];
+
+// ⬇️ 預設【好文分享】
+const INITIAL_ARTICLES = [
+  { 
+    id: 1, 
+    title: '為什麼學數學很重要？從生活中的小事看起', 
+    category: '數學教學', 
+    content: '數學不只是枯燥的計算，更是一種解決問題的邏輯思維。在日常生活中，我們無時無刻都在使用數學：從超市購物比價、規劃旅遊預算，到理解新聞中的統計數據。\n\n培養良好的數學素養，能夠幫助孩子在未來面對複雜挑戰時，擁有更清晰的分析能力。希望家長們能多鼓勵孩子在生活中尋找數學的影子！', 
+    url: 'https://example.com/math-life', 
+    date: '2026-04-28' 
+  },
+  { 
+    id: 2, 
+    title: '面對挫折的態度：成長型思維', 
+    category: '人生哲學', 
+    content: '在學習的路上，難免會遇到考試不理想、或是聽不懂課程的時候。重點不是分數的高低，而是我們如何從錯誤中學習。\n\n擁有「成長型思維」的孩子，會把挑戰當成進步的階梯。與其說「我就是學不會數學」，不如換個角度想「我只是還沒找到適合我的學習方法」。讓我們一起陪伴孩子建立不怕失敗的勇氣！', 
+    url: '', 
+    date: '2026-04-25' 
+  },
 ];
 
 // --- 系統選單設定 ---
@@ -285,7 +191,8 @@ export default function App() {
     roster: INITIAL_ROSTER,
     videos: INITIAL_VIDEOS,
     materials: INITIAL_MATERIALS,
-    awards: INITIAL_AWARDS
+    awards: INITIAL_AWARDS,
+    articles: INITIAL_ARTICLES
   });
 
   const [activeTab, setActiveTab] = useState('home');
@@ -381,7 +288,7 @@ export default function App() {
     { id: 'photos', label: '活動照片', icon: <ImageIcon size={20} /> },
     { id: 'info', label: '班級資訊', icon: <Users size={20} /> },
     { id: 'resources', label: '學習資源', icon: <BookOpen size={20} /> },
-    { id: 'discussion', label: '留言板', icon: <MessageSquare size={20} /> },
+    { id: 'articles', label: '好文分享', icon: <Newspaper size={20} /> }, // 替換為文章分享
   ];
 
   if (!isLoaded) {
@@ -455,7 +362,7 @@ export default function App() {
         {activeTab === 'photos' && <PhotosView isAdmin={isAdmin} ConfirmModal={ConfirmModal} photos={appState.photos} updateAppState={updateAppState} />}
         {activeTab === 'info' && <ClassInfoView isAdmin={isAdmin} schedule={appState.schedule} roster={appState.roster} updateAppState={updateAppState} />}
         {activeTab === 'resources' && <ResourcesView isAdmin={isAdmin} ConfirmModal={ConfirmModal} videos={appState.videos} materials={appState.materials} updateAppState={updateAppState} />}
-        {activeTab === 'discussion' && <DiscussionView user={user} isAdmin={isAdmin} ConfirmModal={ConfirmModal} db={db} appId={appId} />}
+        {activeTab === 'articles' && <ArticlesView isAdmin={isAdmin} articles={appState.articles} updateAppState={updateAppState} ConfirmModal={ConfirmModal} />}
       </main>
 
       <footer className="bg-white border-t border-gray-200 py-8 mt-auto">
@@ -491,6 +398,10 @@ export default function App() {
     </div>
   );
 }
+
+// ==========================================
+// Views Components
+// ==========================================
 
 function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState, ConfirmModal }) {
   const [showEditBgModal, setShowEditBgModal] = useState(false);
@@ -577,7 +488,7 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
             { id: 'photos', title: '活動精選', desc: '精彩瞬間', icon: <ImageIcon size={28} />, color: 'bg-rose-50 text-rose-600' },
             { id: 'info', title: '班級課表', desc: '作息一覽', icon: <Calendar size={28} />, color: 'bg-emerald-50 text-emerald-600' },
             { id: 'resources', title: '線上學習', desc: '教材與影片', icon: <PlayCircle size={28} />, color: 'bg-indigo-50 text-indigo-600' },
-            { id: 'discussion', title: '親師交流', desc: '線上留言', icon: <MessageSquare size={28} />, color: 'bg-amber-50 text-amber-600' },
+            { id: 'articles', title: '好文分享', desc: '優質文章閱讀', icon: <Newspaper size={28} />, color: 'bg-amber-50 text-amber-600' },
           ].map((item) => (
             <button key={item.id} onClick={() => navigateTo(item.id)} className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 flex flex-col items-center text-center transition-all hover:-translate-y-1 group">
               <div className={`w-14 h-14 ${item.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>{item.icon}</div>
@@ -832,7 +743,7 @@ function ClassInfoView({ isAdmin, schedule, roster, updateAppState }) {
     textArea.focus();
     textArea.select();
     try { document.execCommand('copy'); alert('已複製到剪貼簿！'); } 
-    catch (err) { alert('複製失敗，請手手動選取文字複製。'); }
+    catch (err) { alert('複製失敗，請手動選取文字複製。'); }
     document.body.removeChild(textArea);
   };
 
@@ -1329,109 +1240,200 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
   );
 }
 
-function DiscussionView({ user, isAdmin, ConfirmModal, db, appId }) {
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newMessage, setNewMessage] = useState('');
-  const [role, setRole] = useState(isAdmin ? 'teacher' : 'student'); 
-  const [customName, setCustomName] = useState('');
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
-  const messagesEndRef = useRef(null);
+function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
+  const [filterCat, setFilterCat] = useState('全部');
+  const [expandedId, setExpandedId] = useState(null);
+  
+  // 編輯與新增 Modal 狀態
+  const [showModal, setShowModal] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [formData, setFormData] = useState({ title: '', category: '', content: '', url: '', date: '' });
+  const [deleteId, setDeleteId] = useState(null);
 
-  useEffect(() => {
-    if (!db || !user) {
-      setMessages([
-        { id: '1', text: '老師好，請問明天的數學小考範圍是哪裡？', author: '學生', role: 'student', time: '18:30', timestamp: 1 },
-        { id: '2', text: '明天考第三章 3-1 到 3-2 喔！大家加油！', author: 'John 老師', role: 'teacher', time: '18:45', timestamp: 2 }
-      ]);
-      setLoading(false);
-      return;
+  // 取得目前所有不重複的分類
+  const categories = ['全部', ...Array.from(new Set(articles.map(a => a.category).filter(Boolean)))];
+  
+  // 根據分類篩選文章
+  const filteredArticles = filterCat === '全部' ? articles : articles.filter(a => a.category === filterCat);
+
+  const handleOpenModal = (article = null) => {
+    if (article) {
+      setEditId(article.id);
+      setFormData(article);
+    } else {
+      setEditId(null);
+      setFormData({ title: '', category: '', content: '', url: '', date: new Date().toISOString().split('T')[0] });
     }
-    const unsub = onSnapshot(collection(db, 'class_messages', appId, 'posts'), (snap) => {
-        const msgs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        msgs.sort((a,b) => a.timestamp - b.timestamp);
-        setMessages(msgs);
-        setLoading(false);
-    }, (err) => { setLoading(false); });
-    return () => unsub();
-  }, [user, db, appId]);
-
-  useEffect(() => { if(isAdmin) setRole('teacher'); }, [isAdmin]);
-  useEffect(() => { setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100); }, [messages]);
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !user) return;
-    const newMsg = {
-      text: newMessage.trim(), userId: user.uid, author: customName.trim() || (role === 'teacher' ? 'John 老師' : (role === 'parent' ? '家長' : '學生')),
-      role: role, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), timestamp: Date.now()
-    };
-    if (db) { await addDoc(collection(db, 'class_messages', appId, 'posts'), newMsg); } 
-    else { setMessages([...messages, { id: Date.now().toString(), ...newMsg }]); }
-    setNewMessage(''); 
+    setShowModal(true);
   };
 
-  const confirmDeleteMsg = async () => {
-    if (db) { await deleteDoc(doc(db, 'class_messages', appId, 'posts', deleteConfirmId)); } 
-    else { setMessages(messages.filter(m => m.id !== deleteConfirmId)); }
-    setDeleteConfirmId(null);
+  const handleSave = () => {
+    if (!formData.title.trim() || !formData.category.trim()) {
+      alert('請至少填寫「文章標題」與「文章分類」');
+      return;
+    }
+    if (editId) {
+      const newArticles = articles.map(a => a.id === editId ? { ...formData, id: editId } : a);
+      updateAppState({ articles: newArticles });
+    } else {
+      const newArticles = [{ ...formData, id: Date.now() }, ...articles];
+      updateAppState({ articles: newArticles });
+    }
+    setShowModal(false);
+  };
+
+  const confirmDelete = () => {
+    updateAppState({ articles: articles.filter(a => a.id !== deleteId) });
+    setDeleteId(null);
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in h-full flex flex-col">
-      <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">討論區 / 留言板</h2>
-        <p className="text-gray-500">歡迎提問、交流學習心得或聯繫導師</p>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+            好文分享
+          </h2>
+          <p className="text-gray-500">精選優質好文，一起閱讀與成長</p>
+        </div>
+        {isAdmin && (
+          <button onClick={() => handleOpenModal()} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-blue-700 transition-colors">
+            <Plus size={18} /> 新增文章
+          </button>
+        )}
       </div>
 
-      <div className="bg-white p-4 rounded-t-2xl border border-gray-200 border-b-0 flex flex-wrap gap-4 items-center justify-between">
-         <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-600 font-medium">發言身分：</span>
-            <select value={role} onChange={(e) => setRole(e.target.value)} className="border border-gray-300 rounded-md py-1 px-2 focus:ring-blue-500 outline-none" disabled={isAdmin}>
-              <option value="student">學生</option><option value="parent">家長</option><option value="teacher">老師</option>
-            </select>
-         </div>
-         <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-600 font-medium">暱稱：</span>
-            <input type="text" placeholder="選填" value={customName} onChange={(e) => setCustomName(e.target.value)} className="border border-gray-300 rounded-md py-1 px-2 focus:ring-blue-500 outline-none w-32" />
-         </div>
+      {/* 分類標籤 (Category Filter) */}
+      <div className="flex flex-wrap gap-2 mb-8">
+        {categories.map(cat => (
+          <button 
+            key={cat}
+            onClick={() => setFilterCat(cat)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              filterCat === cat ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
-      <div className="bg-gray-50 border border-gray-200 rounded-b-2xl h-[500px] flex flex-col relative shadow-sm">
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-          {loading ? (<div className="h-full flex items-center justify-center text-gray-400">載入留言中...</div>) 
-          : messages.length === 0 ? (<div className="h-full flex items-center justify-center text-gray-400">目前還沒有留言，來當第一個發言的人吧！</div>) 
-          : ( messages.map((msg) => {
-              const isTeacher = msg.role === 'teacher';
-              const style = isTeacher ? { badge: 'bg-blue-100 text-blue-700', bg: 'bg-blue-50 border-blue-100', align: 'self-start' } 
-                                      : { badge: msg.role === 'parent' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700', bg: 'bg-white border-gray-100', align: 'self-end' };
-              return (
-                <div key={msg.id} className={`flex flex-col max-w-[80%] ${isTeacher ? 'items-start' : 'items-end self-end ml-auto'} group`}>
-                  <div className="flex items-center gap-2 mb-1 px-1">
-                    <span className="text-xs text-gray-500">{msg.time}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${style.badge}`}>{isTeacher ? '老師' : (msg.role === 'parent' ? '家長' : '學生')}</span>
-                    <span className="text-sm font-medium text-gray-700">{msg.author}</span>
-                    {isAdmin && (<button onClick={() => setDeleteConfirmId(msg.id)} className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity ml-2"><Trash2 size={14}/></button>)}
-                  </div>
-                  <div className={`px-4 py-3 rounded-2xl shadow-sm border ${style.bg} ${isTeacher ? 'rounded-tl-none' : 'rounded-tr-none'}`}>
-                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{msg.text}</p>
-                  </div>
+      {/* 文章列表 */}
+      <div className="space-y-6">
+        {filteredArticles.map(article => {
+          const isExpanded = expandedId === article.id;
+          return (
+            <div key={article.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 group relative">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1">
+                  <Tag size={12}/> {article.category}
+                </span>
+                <span className="text-gray-400 text-sm flex items-center gap-1">
+                  <Calendar size={14}/> {article.date}
+                </span>
+              </div>
+              
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">{article.title}</h3>
+              
+              <div className={`text-gray-700 leading-relaxed whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}>
+                {article.content}
+              </div>
+              
+              <div className="mt-4 flex items-center justify-between pt-4 border-t border-gray-50">
+                <div className="flex items-center gap-4">
+                  {article.content && article.content.length > 100 && (
+                    <button 
+                      onClick={() => setExpandedId(isExpanded ? null : article.id)}
+                      className="text-blue-600 font-medium text-sm flex items-center gap-1 hover:text-blue-800"
+                    >
+                      {isExpanded ? <><ChevronUp size={16}/> 收起內容</> : <><ChevronDown size={16}/> 繼續閱讀</>}
+                    </button>
+                  )}
+                  {article.url && (
+                    <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-gray-500 font-medium text-sm flex items-center gap-1 hover:text-gray-800">
+                      閱讀原文連結 <ExternalLink size={14} />
+                    </a>
+                  )}
                 </div>
-              )
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-        <div className="p-3 md:p-4 bg-white border-t border-gray-200 rounded-b-2xl">
-          <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-            <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="輸入留言內容..." className="flex-1 resize-none border border-gray-300 rounded-xl py-3 px-4 focus:ring-2 focus:ring-blue-500 outline-none max-h-32 min-h-[50px]" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }} />
-            <button type="submit" disabled={!newMessage.trim() || !user} className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors flex items-center justify-center shrink-0 mb-1">
-              <Send size={20} className={newMessage.trim() ? 'translate-x-0.5 -translate-y-0.5 transition-transform' : ''} />
-            </button>
-          </form>
-        </div>
+
+                {isAdmin && (
+                  <div className="flex gap-2">
+                    <button onClick={() => handleOpenModal(article)} className="text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 p-2 rounded-lg transition-colors"><Edit2 size={16}/></button>
+                    <button onClick={() => setDeleteId(article.id)} className="text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 p-2 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {filteredArticles.length === 0 && (
+          <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-100">
+            目前這個分類還沒有文章喔！
+          </div>
+        )}
       </div>
-      <ConfirmModal isOpen={deleteConfirmId !== null} title="刪除留言" message="確定要刪除這則討論區留言嗎？" onCancel={() => setDeleteConfirmId(null)} onConfirm={confirmDeleteMsg} />
+
+      {/* 新增 / 編輯文章 Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <h3 className="text-xl font-bold mb-4">{editId ? '編輯文章' : '新增文章'}</h3>
+            
+            <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">文章標題 <span className="text-red-500">*</span></label>
+                  <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="請輸入標題" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">文章分類 <span className="text-red-500">*</span></label>
+                  <input 
+                    type="text" 
+                    list="article-categories" 
+                    value={formData.category} 
+                    onChange={e => setFormData({...formData, category: e.target.value})} 
+                    className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" 
+                    placeholder="輸入新分類或選擇現有分類" 
+                  />
+                  <datalist id="article-categories">
+                    {categories.filter(c => c !== '全部').map(cat => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">發布日期</label>
+                <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">外部連結 (選填)</label>
+                <input type="text" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">文章內容</label>
+                <textarea 
+                  value={formData.content} 
+                  onChange={e => setFormData({...formData, content: e.target.value})} 
+                  className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[200px]" 
+                  placeholder="在此輸入或貼上文章內容..." 
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors font-medium">取消</button>
+              <button onClick={handleSave} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md">儲存文章</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 刪除確認 Modal */}
+      <ConfirmModal isOpen={deleteId !== null} title="刪除文章" message="確定要刪除這篇文章嗎？刪除後將無法復原。" onCancel={() => setDeleteId(null)} onConfirm={confirmDelete} />
     </div>
   );
 }
