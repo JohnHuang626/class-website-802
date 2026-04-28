@@ -5,7 +5,7 @@ import {
   FileText, CheckSquare, User, ChevronRight, Play,
   Smartphone, Lock, Plus, Edit2, Save, Trash2, AlertCircle,
   Download, Copy, Newspaper, Tag, ChevronDown, ChevronUp,
-  GripVertical
+  GripVertical, Video
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -60,6 +60,12 @@ const getYouTubeVideoId = (url) => {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
+};
+
+// --- 輔助工具：判斷是否為支援的影片平台 ---
+const isRecognizedVideo = (url) => {
+  if (!url) return false;
+  return getYouTubeVideoId(url) || url.includes('instagram.com') || url.includes('facebook.com') || url.includes('fb.watch');
 };
 
 // =========================================================================
@@ -128,7 +134,7 @@ const INITIAL_AWARDS = [
   { id: 2, date: '2026-03', title: '生活榮譽競賽 連續三週 冠軍' },
 ];
 
-// ⬇️ 預設【好文分享】
+// ⬇️ 預設【好文/影片分享】
 const INITIAL_ARTICLES = [
   { 
     id: 1, 
@@ -145,6 +151,14 @@ const INITIAL_ARTICLES = [
     content: '在學習的路上，難免會遇到考試不理想、或是聽不懂課程的時候。重點不是分數的高低，而是我們如何從錯誤中學習。\n\n擁有「成長型思維」的孩子，會把挑戰當成進步的階梯。與其說「我就是學不會數學」，不如換個角度想「我只是還沒找到適合我的學習方法」。讓我們一起陪伴孩子建立不怕失敗的勇氣！', 
     url: '', 
     date: '2026-04-25' 
+  },
+  { 
+    id: 3, 
+    title: 'TED-Ed：數學如何幫助我們理解世界？', 
+    category: '課外影音', 
+    content: '這是一部非常棒的 TED-Ed 動畫短片，用非常生動的方式解釋了為什麼數學語言能夠描述大自然中的各種現象，推薦給同學和家長們一起欣賞！', 
+    url: 'https://www.youtube.com/watch?v=ObP0FjYkRNE', 
+    date: '2026-04-20' 
   },
 ];
 
@@ -182,6 +196,48 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
     </div>
   );
 }
+
+// --- 共用元件：媒體嵌入顯示器 (MediaEmbed) ---
+function MediaEmbed({ url }) {
+  if (!url) return null;
+
+  const ytId = getYouTubeVideoId(url);
+  if (ytId) {
+    return (
+      <div className="mt-4 relative w-full max-w-2xl aspect-video rounded-xl overflow-hidden bg-gray-900 shadow-md">
+        <iframe 
+          src={`https://www.youtube.com/embed/${ytId}`} 
+          className="absolute top-0 left-0 w-full h-full border-0"
+          allowFullScreen 
+          title="YouTube Video"
+        ></iframe>
+      </div>
+    );
+  }
+
+  if (url.includes('instagram.com')) {
+    // 將 IG 網址轉為 embed 格式
+    const cleanUrl = url.split('?')[0].replace(/\/$/, '');
+    const embedUrl = `${cleanUrl}/embed`;
+    return (
+      <div className="mt-4 w-full max-w-md bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        <iframe src={embedUrl} width="100%" height="480" frameBorder="0" scrolling="no" allowTransparency="true" title="Instagram Video"></iframe>
+      </div>
+    );
+  }
+
+  if (url.includes('facebook.com') || url.includes('fb.watch')) {
+    const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&width=560`;
+    return (
+      <div className="mt-4 w-full max-w-2xl bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden relative" style={{ paddingTop: '56.25%' }}>
+        <iframe src={embedUrl} className="absolute top-0 left-0 w-full h-full border-0" scrolling="no" frameBorder="0" allowFullScreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" title="Facebook Video"></iframe>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 
 export default function App() {
   // 全域狀態
@@ -1354,11 +1410,11 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
           <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
             好文分享
           </h2>
-          <p className="text-gray-500">精選優質好文，一起閱讀與成長</p>
+          <p className="text-gray-500">精選優質好文與教育影片，一起閱讀與成長</p>
         </div>
         {isAdmin && (
           <button onClick={() => handleOpenModal()} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-blue-700 transition-colors">
-            <Plus size={18} /> 新增文章
+            <Plus size={18} /> 新增文章/影片
           </button>
         )}
       </div>
@@ -1382,6 +1438,8 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
       <div className="space-y-6">
         {filteredArticles.map(article => {
           const isExpanded = expandedId === article.id;
+          const isVideo = isRecognizedVideo(article.url);
+          
           return (
             <div key={article.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 group relative">
               <div className="flex items-center gap-3 mb-3">
@@ -1398,9 +1456,12 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
               <div className={`text-gray-700 leading-relaxed whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}>
                 {article.content}
               </div>
+
+              {/* 自動影片嵌入區域 */}
+              <MediaEmbed url={article.url} />
               
               <div className="mt-4 flex items-center justify-between pt-4 border-t border-gray-50">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                   {article.content && article.content.length > 100 && (
                     <button 
                       onClick={() => setExpandedId(isExpanded ? null : article.id)}
@@ -1410,8 +1471,8 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
                     </button>
                   )}
                   {article.url && (
-                    <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-gray-500 font-medium text-sm flex items-center gap-1 hover:text-gray-800">
-                      閱讀原文連結 <ExternalLink size={14} />
+                    <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-gray-500 font-medium text-sm flex items-center gap-1 hover:text-gray-800 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                      {isVideo ? <><Video size={14} className="text-red-500" /> 前往影片網址</> : <><ExternalLink size={14} className="text-blue-500" /> 閱讀原文連結</>}
                     </a>
                   )}
                 </div>
@@ -1437,12 +1498,12 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
       {showModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
-            <h3 className="text-xl font-bold mb-4">{editId ? '編輯文章' : '新增文章'}</h3>
+            <h3 className="text-xl font-bold mb-4">{editId ? '編輯文章' : '新增文章 / 影片'}</h3>
             
             <div className="flex-1 overflow-y-auto pr-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">文章標題 <span className="text-red-500">*</span></label>
+                  <label className="block text-sm text-gray-600 mb-1">標題 <span className="text-red-500">*</span></label>
                   <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="請輸入標題" />
                 </div>
                 <div>
@@ -1469,16 +1530,16 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-600 mb-1">外部連結 (選填)</label>
+                <label className="block text-sm text-gray-600 mb-1">外部連結或影片網址 (選填) - 支援 YouTube, FB, IG</label>
                 <input type="text" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-600 mb-1">文章內容</label>
+                <label className="block text-sm text-gray-600 mb-1">內容或心得</label>
                 <textarea 
                   value={formData.content} 
                   onChange={e => setFormData({...formData, content: e.target.value})} 
-                  className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[200px]" 
+                  className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[150px]" 
                   placeholder="在此輸入或貼上文章內容..." 
                 />
               </div>
@@ -1486,7 +1547,7 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
             
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors font-medium">取消</button>
-              <button onClick={handleSave} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md">儲存文章</button>
+              <button onClick={handleSave} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md">儲存內容</button>
             </div>
           </div>
         </div>
