@@ -967,11 +967,19 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
   const [newVideo, setNewVideo] = useState({ title: '', url: '' });
   const [deleteVideoId, setDeleteVideoId] = useState(null);
+  
+  // 行內編輯狀態 - Video
+  const [editingVideoId, setEditingVideoId] = useState(null);
+  const [editVideoData, setEditVideoData] = useState({ title: '', url: '' });
 
   // Material States
   const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
   const [newMaterial, setNewMaterial] = useState({ title: '', url: '' });
   const [deleteMaterialId, setDeleteMaterialId] = useState(null);
+  
+  // 行內編輯狀態 - Material
+  const [editingMaterialId, setEditingMaterialId] = useState(null);
+  const [editMaterialData, setEditMaterialData] = useState({ title: '', url: '' });
 
   // IO States
   const [showIOModal, setShowIOModal] = useState(false);
@@ -979,6 +987,7 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
   const [ioText, setIoText] = useState('');
   const [ioError, setIoError] = useState('');
 
+  // --- Video Functions ---
   const confirmAddVideo = () => {
     if(newVideo.title.trim() && newVideo.url.trim()) {
       const videoId = getYouTubeVideoId(newVideo.url);
@@ -994,9 +1003,25 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
     setDeleteVideoId(null);
   };
 
+  const startEditVideo = (video) => {
+    setEditingVideoId(video.id);
+    setEditVideoData({ title: video.title, url: video.url });
+  };
+
+  const saveEditVideo = () => {
+    if(editVideoData.title.trim() && editVideoData.url.trim()) {
+      const videoId = getYouTubeVideoId(editVideoData.url);
+      const newVideos = videos.map(v => 
+        v.id === editingVideoId ? { ...v, title: editVideoData.title, url: editVideoData.url, videoId: videoId } : v
+      );
+      updateAppState({ videos: newVideos });
+      setEditingVideoId(null);
+    }
+  };
+
+  // --- Material Functions ---
   const confirmAddMaterial = () => {
     if(newMaterial.title.trim() && newMaterial.url.trim()) {
-      // 根據網址自動判斷副檔名標籤
       let ext = 'LINK';
       const urlUpper = newMaterial.url.toUpperCase();
       if (urlUpper.includes('.PDF')) ext = 'PDF';
@@ -1015,6 +1040,28 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
     setDeleteMaterialId(null);
   };
 
+  const startEditMaterial = (material) => {
+    setEditingMaterialId(material.id);
+    setEditMaterialData({ title: material.title, url: material.url });
+  };
+
+  const saveEditMaterial = () => {
+    if(editMaterialData.title.trim() && editMaterialData.url.trim()) {
+      let ext = 'LINK';
+      const urlUpper = editMaterialData.url.toUpperCase();
+      if (urlUpper.includes('.PDF')) ext = 'PDF';
+      else if (urlUpper.includes('.DOC') || urlUpper.includes('DOCUMENT')) ext = 'DOC';
+      else if (urlUpper.includes('DRIVE.GOOGLE')) ext = 'DRIVE';
+
+      const newMats = materials.map(m => 
+        m.id === editingMaterialId ? { ...m, title: editMaterialData.title, url: editMaterialData.url, ext: ext } : m
+      );
+      updateAppState({ materials: newMats });
+      setEditingMaterialId(null);
+    }
+  };
+
+  // --- IO Functions ---
   const handleOpenIO = (type) => {
     setIoType(type);
     setIoText(JSON.stringify(type === 'videos' ? videos : materials, null, 2));
@@ -1084,7 +1131,7 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">數位學習資源</h2>
-        <p className="text-gray-500">讀書沒有捷徑，只有多聽、多看、多練</p>
+        <p className="text-gray-500">數學沒有捷徑，只有多聽、多看、多練</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1104,24 +1151,38 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
             )}
             <div className="space-y-4">
               {videos.map((video) => (
-                <div key={video.id} className="flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-100 relative">
-                  <a href={video.url} target="_blank" rel="noopener noreferrer" className="relative w-32 md:w-40 aspect-video bg-gray-900 rounded-lg overflow-hidden shrink-0 flex items-center justify-center group-hover:opacity-90">
-                    <img 
-                      src={video.videoId ? `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg` : `https://images.unsplash.com/photo-1632516643720-e7f0d7e6a727?auto=format&fit=crop&q=80&w=400&sig=${video.id}`} 
-                      alt="thumbnail" 
-                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" 
-                    />
-                    <Play className="text-white w-8 h-8 opacity-80 group-hover:scale-110 transition-transform" />
-                  </a>
-                  <div className="flex flex-col justify-center">
-                    <a href={video.url} target="_blank" rel="noopener noreferrer">
-                      <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">{video.title}</h4>
-                    </a>
+                editingVideoId === video.id ? (
+                  <div key={video.id} className="flex flex-col gap-3 p-4 border border-blue-200 bg-blue-50 rounded-xl w-full">
+                    <input type="text" value={editVideoData.title} onChange={e=>setEditVideoData({...editVideoData, title: e.target.value})} className="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="影片標題"/>
+                    <input type="text" value={editVideoData.url} onChange={e=>setEditVideoData({...editVideoData, url: e.target.value})} className="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="YouTube 網址"/>
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setEditingVideoId(null)} className="text-gray-500 text-sm px-3 py-1.5 hover:bg-blue-100 rounded-lg">取消</button>
+                      <button onClick={saveEditVideo} className="bg-blue-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-blue-700 font-medium shadow-sm">儲存</button>
+                    </div>
                   </div>
-                  {isAdmin && (
-                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteVideoId(video.id); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={20}/></button>
-                  )}
-                </div>
+                ) : (
+                  <div key={video.id} className="flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-100 relative">
+                    <a href={video.url} target="_blank" rel="noopener noreferrer" className="relative w-32 md:w-40 aspect-video bg-gray-900 rounded-lg overflow-hidden shrink-0 flex items-center justify-center group-hover:opacity-90">
+                      <img 
+                        src={video.videoId ? `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg` : `https://images.unsplash.com/photo-1632516643720-e7f0d7e6a727?auto=format&fit=crop&q=80&w=400&sig=${video.id}`} 
+                        alt="thumbnail" 
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" 
+                      />
+                      <Play className="text-white w-8 h-8 opacity-80 group-hover:scale-110 transition-transform" />
+                    </a>
+                    <div className="flex flex-col justify-center pr-16">
+                      <a href={video.url} target="_blank" rel="noopener noreferrer">
+                        <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">{video.title}</h4>
+                      </a>
+                    </div>
+                    {isAdmin && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-lg px-1 py-0.5 shadow-sm">
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditVideo(video); }} className="text-gray-500 hover:text-blue-600 p-1.5"><Edit2 size={16}/></button>
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteVideoId(video.id); }} className="text-gray-500 hover:text-red-500 p-1.5"><Trash2 size={16}/></button>
+                      </div>
+                    )}
+                  </div>
+                )
               ))}
               {videos.length === 0 && <p className="text-sm text-gray-400 text-center py-4">目前尚無教學影片</p>}
             </div>
@@ -1146,17 +1207,29 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
             )}
             <div className="space-y-2">
               {materials.map((file) => (
-                <div key={file.id} className="relative group">
-                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-blue-50 text-left transition-colors border border-transparent hover:border-blue-100">
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 truncate pr-8">{file.title}</span>
-                    <span className="text-[10px] font-bold px-2 py-1 bg-gray-100 text-gray-500 rounded group-hover:bg-blue-200 group-hover:text-blue-800 shrink-0">{file.ext}</span>
-                  </a>
-                  {isAdmin && (
-                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteMaterialId(file.id); }} className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Trash2 size={16}/>
-                    </button>
-                  )}
-                </div>
+                editingMaterialId === file.id ? (
+                  <div key={file.id} className="flex flex-col gap-2 p-3 border border-blue-200 bg-blue-50 rounded-xl w-full mb-2">
+                    <input type="text" value={editMaterialData.title} onChange={e=>setEditMaterialData({...editMaterialData, title: e.target.value})} className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="教材標題"/>
+                    <input type="text" value={editMaterialData.url} onChange={e=>setEditMaterialData({...editMaterialData, url: e.target.value})} className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="檔案連結"/>
+                    <div className="flex justify-end gap-2 mt-1">
+                      <button onClick={() => setEditingMaterialId(null)} className="text-gray-500 text-sm px-2 py-1 hover:bg-blue-100 rounded">取消</button>
+                      <button onClick={saveEditMaterial} className="bg-blue-600 text-white text-sm px-3 py-1 rounded hover:bg-blue-700 shadow-sm">儲存</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={file.id} className="relative group">
+                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-blue-50 text-left transition-colors border border-transparent hover:border-blue-100">
+                      <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 truncate pr-16">{file.title}</span>
+                      <span className="text-[10px] font-bold px-2 py-1 bg-gray-100 text-gray-500 rounded group-hover:bg-blue-200 group-hover:text-blue-800 shrink-0">{file.ext}</span>
+                    </a>
+                    {isAdmin && (
+                      <div className="absolute right-12 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm rounded-lg px-1 py-0.5">
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditMaterial(file); }} className="text-gray-500 hover:text-blue-600 p-1.5"><Edit2 size={14}/></button>
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteMaterialId(file.id); }} className="text-gray-500 hover:text-red-500 p-1.5"><Trash2 size={14}/></button>
+                      </div>
+                    )}
+                  </div>
+                )
               ))}
               {materials.length === 0 && <p className="text-sm text-gray-400 text-center py-2">目前尚無補充教材</p>}
             </div>
