@@ -536,6 +536,7 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
         </div>
       )}
 
+      {/* Quick Links Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {[
@@ -658,6 +659,20 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
   const [newPhoto, setNewPhoto] = useState({ title: '', url: '', date: '' });
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
+  // Drag & Drop States for Photos
+  const dragPhotoItem = useRef(null);
+  const dragPhotoOverItem = useRef(null);
+
+  const handlePhotoSort = () => {
+    if (dragPhotoItem.current === null || dragPhotoOverItem.current === null || dragPhotoItem.current === dragPhotoOverItem.current) return;
+    const _photos = [...photos];
+    const draggedItemContent = _photos.splice(dragPhotoItem.current, 1)[0];
+    _photos.splice(dragPhotoOverItem.current, 0, draggedItemContent);
+    dragPhotoItem.current = null;
+    dragPhotoOverItem.current = null;
+    updateAppState({ photos: _photos });
+  };
+
   const handleAddPhoto = () => {
     if(!newPhoto.url || !newPhoto.title) return;
     const processedUrl = processImageUrl(newPhoto.url);
@@ -670,6 +685,16 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
     updateAppState({ photos: [photo, ...photos] });
     setShowAddModal(false);
     setNewPhoto({ title: '', url: '', date: '' });
+  };
+
+  const triggerDelete = (e, id) => {
+    e.stopPropagation();
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDeletePhoto = () => {
+    updateAppState({ photos: photos.filter(p => p.id !== deleteConfirmId) });
+    setDeleteConfirmId(null);
   };
 
   return (
@@ -687,15 +712,29 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
       </div>
 
       <div className="columns-1 sm:columns-2 md:columns-3 gap-6 space-y-6">
-        {photos.map((photo) => (
-          <div key={photo.id} className="break-inside-avoid relative rounded-2xl overflow-hidden group cursor-pointer shadow-sm hover:shadow-xl transition-all" onClick={() => setSelectedImage(photo)}>
+        {photos.map((photo, index) => (
+          <div 
+            key={photo.id} 
+            draggable={isAdmin}
+            onDragStart={() => (dragPhotoItem.current = index)}
+            onDragEnter={() => (dragPhotoOverItem.current = index)}
+            onDragEnd={handlePhotoSort}
+            onDragOver={(e) => e.preventDefault()}
+            className={`break-inside-avoid relative rounded-2xl overflow-hidden group shadow-sm hover:shadow-xl transition-all ${isAdmin ? 'cursor-move' : 'cursor-pointer'}`} 
+            onClick={() => setSelectedImage(photo)}
+          >
+            {isAdmin && (
+              <div className="absolute top-4 left-4 z-10 bg-black/40 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm pointer-events-none">
+                <GripVertical size={16} />
+              </div>
+            )}
             <img src={photo.url} alt={photo.title} className="w-full h-auto transform group-hover:scale-105 transition-transform duration-700" loading="lazy" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
               <span className="text-white/80 text-sm mb-1">{photo.date}</span>
               <h3 className="text-white font-bold text-lg">{photo.title}</h3>
             </div>
             {isAdmin && (
-              <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(photo.id); }} className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md">
+              <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(photo.id); }} className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md z-10">
                 <Trash2 size={16} />
               </button>
             )}
