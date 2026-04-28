@@ -21,7 +21,7 @@ if (typeof window !== 'undefined' && !document.getElementById('tailwind-cdn')) {
 }
 
 // ==========================================
-// ⚠️ Firebase 初始化 (請在這裡貼上您的金鑰)
+// ⚠️ Firebase 初始化 (已套用您的專屬金鑰)
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyB_XxMKi1clOZo8nEJohR64rNhTBfzLqoA",
@@ -70,7 +70,6 @@ const isRecognizedVideo = (url) => {
 
 // =========================================================================
 // ⭐⭐⭐ 老師請看這裡：預設資料區塊 ⭐⭐⭐
-// 下次只要在畫面上修改好，用「匯出」把 JSON 複製下來，直接覆蓋掉下方對應的陣列即可！
 // =========================================================================
 
 const CLASS_INFO = {
@@ -81,7 +80,6 @@ const CLASS_INFO = {
 
 const INITIAL_HERO_BG = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=2000';
 
-// ⬇️ 預設【課表】
 const INITIAL_SCHEDULE = [
   { "fri": "班會", "thu": "英語", "id": 1, "wed": "彈自", "tue": "國文", "mon": "國文", "time": "08:25 - 09:10" },
   { "tue": "國文", "mon": "國文", "time": "09:20 - 10:05", "fri": "英語", "thu": "健康", "id": 2, "wed": "英語" },
@@ -93,7 +91,6 @@ const INITIAL_SCHEDULE = [
   { "tue": "數學", "time": "16:10 - 16:55", "mon": "社會", "thu": "英語", "fri": "國文", "wed": "自然", "id": 8 }
 ];
 
-// ⬇️ 預設【班級幹部】
 const INITIAL_ROSTER = [
   { "id": 1, "role": "班長", "name": "楊子易", "desc": "負責統籌班級事務" },
   { "desc": "協助班長，點名簿管理", "role": "副班長", "name": "江筠苡", "id": 2 },
@@ -107,7 +104,6 @@ const INITIAL_ROSTER = [
   { "desc": "負責營養午餐工作事項", "name": "謝玉茹", "role": "午餐秘書", "id": 10 }
 ];
 
-// ⬇️ 預設【活動照片】
 const INITIAL_PHOTOS = [
   { id: 1, url: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800', title: '校慶運動會大隊接力', date: '2026-11-15' },
   { id: 2, url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800', title: '數學科展準備', date: '2026-10-20' },
@@ -115,26 +111,22 @@ const INITIAL_PHOTOS = [
   { id: 4, url: 'https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&q=80&w=800', title: '期中考後同樂會', date: '2026-04-10' },
 ];
 
-// ⬇️ 預設【教學影片】
 const INITIAL_VIDEOS = [
   { id: 1, title: '三分鐘學會一元二次方程式', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', videoId: 'dQw4w9WgXcQ' },
   { id: 2, title: '幾何圖形基礎觀念', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', videoId: 'dQw4w9WgXcQ' },
 ];
 
-// ⬇️ 預設【補充教材下載】
 const INITIAL_MATERIALS = [
   { id: 1, title: '會考歷屆試題彙整 (幾何篇)', url: '#', ext: 'PDF' },
   { id: 2, title: '公式記憶小卡', url: '#', ext: 'PDF' },
   { id: 3, title: '課堂講義 CH3', url: '#', ext: 'DOC' },
 ];
 
-// ⬇️ 預設【榮譽榜】
 const INITIAL_AWARDS = [
   { id: 1, date: '2026-04', title: '全校運動會 精神總錦標 第一名' },
   { id: 2, date: '2026-03', title: '生活榮譽競賽 連續三週 冠軍' },
 ];
 
-// ⬇️ 預設【好文/影片分享】
 const INITIAL_ARTICLES = [
   { 
     id: 1, 
@@ -162,7 +154,6 @@ const INITIAL_ARTICLES = [
   },
 ];
 
-// --- 系統選單設定 ---
 const SUBJECTS = [
   '國文', '英語', '數學', '自然', '地理', '歷史', '公民', '社會', 
   '體育', '音樂', '科技', '社團', '彈英', '彈自', '彈數', '輔導', 
@@ -197,7 +188,7 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
   );
 }
 
-// --- 共用元件：媒體嵌入顯示器 (MediaEmbed) ---
+// --- 共用元件：媒體嵌入顯示器 ---
 function MediaEmbed({ url }) {
   if (!url) return null;
 
@@ -216,7 +207,6 @@ function MediaEmbed({ url }) {
   }
 
   if (url.includes('instagram.com')) {
-    // 將 IG 網址轉為 embed 格式
     const cleanUrl = url.split('?')[0].replace(/\/$/, '');
     const embedUrl = `${cleanUrl}/embed`;
     return (
@@ -240,7 +230,6 @@ function MediaEmbed({ url }) {
 
 
 export default function App() {
-  // 全域狀態
   const [appState, setAppState] = useState({
     heroBg: INITIAL_HERO_BG,
     photos: INITIAL_PHOTOS,
@@ -257,33 +246,42 @@ export default function App() {
   const [scrolled, setScrolled] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   
-  // Admin & User
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [adminPwd, setAdminPwd] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [user, setUser] = useState(null);
+  
+  // 使用 undefined 代表「驗證尚未完成」
+  const [user, setUser] = useState(undefined);
 
+  // 1. 處理身份驗證
   useEffect(() => {
     if (!auth) {
        setUser({ uid: 'local-user' }); 
-       setIsLoaded(true);
        return;
     }
     const initAuth = async () => {
-      try { await signInAnonymously(auth); } catch(e) {}
+      try { await signInAnonymously(auth); } catch(e) { setUser({ uid: 'local-user' }); }
     };
     initAuth();
-    const unsub = onAuthStateChanged(auth, setUser);
+    const unsub = onAuthStateChanged(auth, (u) => {
+        if (u) setUser(u);
+    });
     return () => unsub();
   }, []);
 
-  // 監聽 Firebase 狀態
+  // 2. 確保驗證完成後才抓取 Firebase 資料
   useEffect(() => {
-    if (!db || !user) {
+    // 驗證未完成時，不要繼續，讓 isLoaded 保持 false 顯示圈圈
+    if (user === undefined) return; 
+
+    // 本機開發或沒有連線資料庫
+    if (!db || user.uid === 'local-user') {
         setIsLoaded(true);
         return;
     }
+    
+    // 連線 Firebase
     const docRef = doc(db, 'class_data', appId);
     const unsub = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -291,18 +289,18 @@ export default function App() {
         } else {
             setDoc(docRef, appState);
         }
-        setIsLoaded(true);
+        setIsLoaded(true); // 確認雲端資料回來了，才解除載入畫面
     }, (err) => {
         console.error(err);
         setIsLoaded(true);
     });
     return () => unsub();
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateAppState = async (newPartialState) => {
     const newState = { ...appState, ...newPartialState };
     setAppState(newState); 
-    if (db && user) {
+    if (db && user && user.uid !== 'local-user') {
        try {
          await setDoc(doc(db, 'class_data', appId), newState, { merge: true });
        } catch(e) {}
@@ -538,7 +536,6 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
         </div>
       )}
 
-      {/* Quick Links Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {[
@@ -566,14 +563,20 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
             <button onClick={() => navigateTo('photos')} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">看更多 <ChevronRight size={16} /></button>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {photos.slice(0, 2).map((photo) => (
-              <div key={photo.id} className="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer" onClick={() => navigateTo('photos')}>
-                <img src={photo.url} alt={photo.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }} />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                  <p className="text-white font-medium truncate">{photo.title}</p>
+            {photos.length === 0 ? (
+               <div className="col-span-2 flex items-center justify-center bg-gray-50 rounded-2xl border border-gray-100 text-gray-400 min-h-[200px]">
+                 目前尚無最新活動照片
+               </div>
+            ) : (
+              photos.slice(0, 2).map((photo) => (
+                <div key={photo.id} className="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer" onClick={() => navigateTo('photos')}>
+                  <img src={photo.url} alt={photo.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                    <p className="text-white font-medium truncate">{photo.title}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -590,24 +593,27 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
               </button>
             )}
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 min-h-[200px]">
             <div className="space-y-6">
-              {awards.map((award, index) => (
-                <div key={award.id} className="flex gap-4 items-start relative group">
-                  {index !== awards.length - 1 && (<div className="absolute left-[11px] top-8 bottom-[-24px] w-[2px] bg-gray-100"></div>)}
-                  <div className="w-6 h-6 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0 z-10 mt-0.5"><Award size={14} /></div>
-                  <div className="flex-1">
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">{award.date}</span>
-                    <p className="text-gray-800 font-medium mt-1 leading-snug">{award.title}</p>
+              {awards.length === 0 ? (
+                 <p className="text-sm text-gray-400 text-center py-4">目前尚無榮譽紀錄</p>
+              ) : (
+                awards.map((award, index) => (
+                  <div key={award.id} className="flex gap-4 items-start relative group">
+                    {index !== awards.length - 1 && (<div className="absolute left-[11px] top-8 bottom-[-24px] w-[2px] bg-gray-100"></div>)}
+                    <div className="w-6 h-6 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0 z-10 mt-0.5"><Award size={14} /></div>
+                    <div className="flex-1">
+                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">{award.date}</span>
+                      <p className="text-gray-800 font-medium mt-1 leading-snug">{award.title}</p>
+                    </div>
+                    {isAdmin && (
+                      <button onClick={() => setDeleteAwardId(award.id)} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                        <Trash2 size={16}/>
+                      </button>
+                    )}
                   </div>
-                  {isAdmin && (
-                    <button onClick={() => setDeleteAwardId(award.id)} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
-                      <Trash2 size={16}/>
-                    </button>
-                  )}
-                </div>
-              ))}
-              {awards.length === 0 && <p className="text-sm text-gray-400 text-center">目前尚無紀錄</p>}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -696,6 +702,8 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
           </div>
         ))}
       </div>
+      
+      {photos.length === 0 && <div className="text-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-100">目前尚無活動照片</div>}
 
       <ConfirmModal isOpen={deleteConfirmId !== null} title="刪除照片" message="確定要刪除這張照片嗎？刪除後無法復原。" onCancel={() => setDeleteConfirmId(null)} onConfirm={() => { updateAppState({ photos: photos.filter(p => p.id !== deleteConfirmId) }); setDeleteConfirmId(null); }} />
 
@@ -947,11 +955,9 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
   const [editingMaterialId, setEditingMaterialId] = useState(null);
   const [editMaterialData, setEditMaterialData] = useState({ title: '', url: '' });
 
-  // Drag & Drop States for Videos
+  // Drag & Drop States
   const dragVideoItem = useRef(null);
   const dragVideoOverItem = useRef(null);
-
-  // Drag & Drop States for Materials
   const dragMaterialItem = useRef(null);
   const dragMaterialOverItem = useRef(null);
 
@@ -961,7 +967,6 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
   const [ioText, setIoText] = useState('');
   const [ioError, setIoError] = useState('');
 
-  // --- Sorting Functions ---
   const handleVideoSort = () => {
     if (dragVideoItem.current === null || dragVideoOverItem.current === null || dragVideoItem.current === dragVideoOverItem.current) return;
     const _videos = [...videos];
@@ -982,7 +987,6 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
     updateAppState({ materials: _materials });
   };
 
-  // --- Video Functions ---
   const confirmAddVideo = () => {
     if(newVideo.title.trim() && newVideo.url.trim()) {
       const videoId = getYouTubeVideoId(newVideo.url);
@@ -1014,7 +1018,6 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
     }
   };
 
-  // --- Material Functions ---
   const confirmAddMaterial = () => {
     if(newMaterial.title.trim() && newMaterial.url.trim()) {
       let ext = 'LINK';
@@ -1056,7 +1059,6 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
     }
   };
 
-  // --- IO Functions ---
   const handleOpenIO = (type) => {
     setIoType(type);
     setIoText(JSON.stringify(type === 'videos' ? videos : materials, null, 2));
@@ -1086,11 +1088,7 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
             else if (urlUpper.includes('.DOC') || urlUpper.includes('DOCUMENT')) ext = 'DOC';
             else if (urlUpper.includes('DRIVE.GOOGLE')) ext = 'DRIVE';
           }
-          return {
-            ...m,
-            id: m.id || Date.now() + Math.random(),
-            ext
-          };
+          return { ...m, id: m.id || Date.now() + Math.random(), ext };
         });
         updateAppState({ materials: processed });
       }
@@ -1102,23 +1100,15 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
   };
 
   const handleCopy = () => {
-    try {
-      navigator.clipboard.writeText(ioText).then(() => {
-        alert('已複製到剪貼簿！');
-      }).catch(err => fallbackCopyTextToClipboard(ioText));
-    } catch (err) {
-      fallbackCopyTextToClipboard(ioText);
-    }
+    try { navigator.clipboard.writeText(ioText).then(()=>alert('已複製！')); } 
+    catch (err) { fallbackCopyTextToClipboard(ioText); }
   };
 
   const fallbackCopyTextToClipboard = (text) => {
     const textArea = document.createElement("textarea");
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try { document.execCommand('copy'); alert('已複製到剪貼簿！'); } 
-    catch (err) { alert('複製失敗，請手動選取文字複製。'); }
+    textArea.value = text; document.body.appendChild(textArea);
+    textArea.focus(); textArea.select();
+    try { document.execCommand('copy'); alert('已複製！'); } catch (err) {}
     document.body.removeChild(textArea);
   };
 
@@ -1130,7 +1120,6 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Videos Column */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative">
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-6"><PlayCircle className="text-red-500" /> 教學影片區</h3>
@@ -1155,12 +1144,7 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
                   onDragOver={(e) => e.preventDefault()}
                   className={`flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-100 relative ${isAdmin && editingVideoId !== video.id ? 'cursor-move' : ''}`}
                 >
-                  {isAdmin && editingVideoId !== video.id && (
-                     <div className="text-gray-300 hover:text-gray-500 shrink-0 hidden md:block">
-                        <GripVertical size={20}/>
-                     </div>
-                  )}
-
+                  {isAdmin && editingVideoId !== video.id && (<div className="text-gray-300 hover:text-gray-500 shrink-0 hidden md:block"><GripVertical size={20}/></div>)}
                   {editingVideoId === video.id ? (
                     <div className="flex flex-col gap-3 p-4 border border-blue-200 bg-blue-50 rounded-xl w-full">
                       <input type="text" value={editVideoData.title} onChange={e=>setEditVideoData({...editVideoData, title: e.target.value})} className="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="影片標題"/>
@@ -1173,17 +1157,11 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
                   ) : (
                     <>
                       <a href={video.url} target="_blank" rel="noopener noreferrer" className="relative w-32 md:w-40 aspect-video bg-gray-900 rounded-lg overflow-hidden shrink-0 flex items-center justify-center group-hover:opacity-90">
-                        <img 
-                          src={video.videoId ? `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg` : `https://images.unsplash.com/photo-1632516643720-e7f0d7e6a727?auto=format&fit=crop&q=80&w=400&sig=${video.id}`} 
-                          alt="thumbnail" 
-                          className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" 
-                        />
+                        <img src={video.videoId ? `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg` : `https://images.unsplash.com/photo-1632516643720-e7f0d7e6a727?auto=format&fit=crop&q=80&w=400&sig=${video.id}`} alt="thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
                         <Play className="text-white w-8 h-8 opacity-80 group-hover:scale-110 transition-transform" />
                       </a>
                       <div className="flex flex-col justify-center flex-1 pr-16">
-                        <a href={video.url} target="_blank" rel="noopener noreferrer">
-                          <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">{video.title}</h4>
-                        </a>
+                        <a href={video.url} target="_blank" rel="noopener noreferrer"><h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">{video.title}</h4></a>
                       </div>
                       {isAdmin && (
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-lg px-1 py-0.5 shadow-sm">
@@ -1200,7 +1178,6 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
           </div>
         </div>
 
-        {/* Materials Column */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative">
             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
@@ -1227,12 +1204,7 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
                   onDragOver={(e) => e.preventDefault()}
                   className={`relative group flex items-center gap-2 ${isAdmin && editingMaterialId !== file.id ? 'cursor-move' : ''}`}
                 >
-                  {isAdmin && editingMaterialId !== file.id && (
-                     <div className="text-gray-300 hover:text-gray-500 shrink-0">
-                        <GripVertical size={16}/>
-                     </div>
-                  )}
-
+                  {isAdmin && editingMaterialId !== file.id && (<div className="text-gray-300 hover:text-gray-500 shrink-0"><GripVertical size={16}/></div>)}
                   {editingMaterialId === file.id ? (
                     <div className="flex flex-col gap-2 p-3 border border-blue-200 bg-blue-50 rounded-xl w-full mb-2">
                       <input type="text" value={editMaterialData.title} onChange={e=>setEditMaterialData({...editMaterialData, title: e.target.value})} className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="教材標題"/>
@@ -1273,11 +1245,9 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
         </div>
       </div>
 
-      {/* Delete Modals */}
       <ConfirmModal isOpen={deleteVideoId !== null} title="刪除影片" message="確定移除這部教學影片嗎？" onCancel={() => setDeleteVideoId(null)} onConfirm={confirmDeleteVideo} />
       <ConfirmModal isOpen={deleteMaterialId !== null} title="刪除教材" message="確定移除這份補充教材嗎？" onCancel={() => setDeleteMaterialId(null)} onConfirm={confirmDeleteMaterial} />
 
-      {/* Add Video Modal */}
       {showAddVideoModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -1300,7 +1270,6 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
         </div>
       )}
 
-      {/* Add Material Modal */}
       {showAddMaterialModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -1323,30 +1292,21 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
         </div>
       )}
 
-      {/* Import/Export Modal */}
       {showIOModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
             <h3 className="text-xl font-bold mb-2">匯入 / 匯出 {ioType === 'videos' ? '教學影片' : '補充教材'}</h3>
             <p className="text-sm text-gray-600 mb-4">
               您可以在此複製目前的資料備份，或是貼上 JSON 格式資料進行整筆匯入。<br/>
-              <span className="text-blue-600 font-medium">💡 小技巧：貼上大量資料後，系統會自動幫您解析影片縮圖與教材類型標籤。若想永久保存為預設值，請一併貼到程式碼的 INITIAL_VIDEOS 或 INITIAL_MATERIALS 區塊！</span>
+              <span className="text-blue-600 font-medium">💡 小技巧：若想永遠變成預設值，請貼到程式碼 INITIAL 區塊內。</span>
             </p>
-            
             <div className="flex-1 overflow-hidden flex flex-col min-h-[300px]">
-              <textarea 
-                className="w-full flex-1 p-4 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                value={ioText} onChange={(e) => setIoText(e.target.value)} spellCheck="false"
-              />
+              <textarea value={ioText} onChange={(e) => setIoText(e.target.value)} spellCheck="false" className="w-full flex-1 p-4 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none resize-none" />
             </div>
-            
             {ioError && <p className="text-red-500 text-sm mt-3 font-medium">{ioError}</p>}
-            
             <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
               <button onClick={() => setShowIOModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
-              <button onClick={handleCopy} className="flex items-center gap-1 px-4 py-2 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-900">
-                <Copy size={16}/> 複製內容
-              </button>
+              <button onClick={handleCopy} className="flex items-center gap-1 px-4 py-2 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-900"><Copy size={16}/> 複製內容</button>
               <button onClick={handleImport} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">儲存匯入</button>
             </div>
           </div>
@@ -1360,16 +1320,12 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
   const [filterCat, setFilterCat] = useState('全部');
   const [expandedId, setExpandedId] = useState(null);
   
-  // 編輯與新增 Modal 狀態
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({ title: '', category: '', content: '', url: '', date: '' });
   const [deleteId, setDeleteId] = useState(null);
 
-  // 取得目前所有不重複的分類
   const categories = ['全部', ...Array.from(new Set(articles.map(a => a.category).filter(Boolean)))];
-  
-  // 根據分類篩選文章
   const filteredArticles = filterCat === '全部' ? articles : articles.filter(a => a.category === filterCat);
 
   const handleOpenModal = (article = null) => {
@@ -1398,18 +1354,11 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
     setShowModal(false);
   };
 
-  const confirmDelete = () => {
-    updateAppState({ articles: articles.filter(a => a.id !== deleteId) });
-    setDeleteId(null);
-  };
-
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            好文分享
-          </h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">好文分享</h2>
           <p className="text-gray-500">精選優質好文與教育影片，一起閱讀與成長</p>
         </div>
         {isAdmin && (
@@ -1419,22 +1368,14 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
         )}
       </div>
 
-      {/* 分類標籤 (Category Filter) */}
       <div className="flex flex-wrap gap-2 mb-8">
         {categories.map(cat => (
-          <button 
-            key={cat}
-            onClick={() => setFilterCat(cat)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              filterCat === cat ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
+          <button key={cat} onClick={() => setFilterCat(cat)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${filterCat === cat ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {cat}
           </button>
         ))}
       </div>
 
-      {/* 文章列表 */}
       <div className="space-y-6">
         {filteredArticles.map(article => {
           const isExpanded = expandedId === article.id;
@@ -1443,12 +1384,8 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
           return (
             <div key={article.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 group relative">
               <div className="flex items-center gap-3 mb-3">
-                <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1">
-                  <Tag size={12}/> {article.category}
-                </span>
-                <span className="text-gray-400 text-sm flex items-center gap-1">
-                  <Calendar size={14}/> {article.date}
-                </span>
+                <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1"><Tag size={12}/> {article.category}</span>
+                <span className="text-gray-400 text-sm flex items-center gap-1"><Calendar size={14}/> {article.date}</span>
               </div>
               
               <h3 className="text-2xl font-bold text-gray-900 mb-4">{article.title}</h3>
@@ -1463,10 +1400,7 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
               <div className="mt-4 flex items-center justify-between pt-4 border-t border-gray-50">
                 <div className="flex items-center gap-4 flex-wrap">
                   {article.content && article.content.length > 100 && (
-                    <button 
-                      onClick={() => setExpandedId(isExpanded ? null : article.id)}
-                      className="text-blue-600 font-medium text-sm flex items-center gap-1 hover:text-blue-800"
-                    >
+                    <button onClick={() => setExpandedId(isExpanded ? null : article.id)} className="text-blue-600 font-medium text-sm flex items-center gap-1 hover:text-blue-800">
                       {isExpanded ? <><ChevronUp size={16}/> 收起內容</> : <><ChevronDown size={16}/> 繼續閱讀</>}
                     </button>
                   )}
@@ -1487,64 +1421,26 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
             </div>
           );
         })}
-        {filteredArticles.length === 0 && (
-          <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-100">
-            目前這個分類還沒有文章喔！
-          </div>
-        )}
+        {filteredArticles.length === 0 && <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-100">目前這個分類還沒有文章喔！</div>}
       </div>
 
-      {/* 新增 / 編輯文章 Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
             <h3 className="text-xl font-bold mb-4">{editId ? '編輯文章' : '新增文章 / 影片'}</h3>
-            
             <div className="flex-1 overflow-y-auto pr-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">標題 <span className="text-red-500">*</span></label>
-                  <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="請輸入標題" />
-                </div>
+                <div><label className="block text-sm text-gray-600 mb-1">標題 <span className="text-red-500">*</span></label><input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="請輸入標題" /></div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">文章分類 <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" 
-                    list="article-categories" 
-                    value={formData.category} 
-                    onChange={e => setFormData({...formData, category: e.target.value})} 
-                    className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" 
-                    placeholder="輸入新分類或選擇現有分類" 
-                  />
-                  <datalist id="article-categories">
-                    {categories.filter(c => c !== '全部').map(cat => (
-                      <option key={cat} value={cat} />
-                    ))}
-                  </datalist>
+                  <input type="text" list="article-categories" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入新分類或選擇現有分類" />
+                  <datalist id="article-categories">{categories.filter(c => c !== '全部').map(cat => <option key={cat} value={cat} />)}</datalist>
                 </div>
               </div>
-              
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">發布日期</label>
-                <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">外部連結或影片網址 (選填) - 支援 YouTube, FB, IG</label>
-                <input type="text" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">內容或心得</label>
-                <textarea 
-                  value={formData.content} 
-                  onChange={e => setFormData({...formData, content: e.target.value})} 
-                  className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[150px]" 
-                  placeholder="在此輸入或貼上文章內容..." 
-                />
-              </div>
+              <div><label className="block text-sm text-gray-600 mb-1">發布日期</label><input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
+              <div><label className="block text-sm text-gray-600 mb-1">外部連結或影片網址 (選填) - 支援 YouTube, FB, IG</label><input type="text" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." /></div>
+              <div><label className="block text-sm text-gray-600 mb-1">內容或心得</label><textarea value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[150px]" placeholder="在此輸入或貼上文章內容..." /></div>
             </div>
-            
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors font-medium">取消</button>
               <button onClick={handleSave} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md">儲存內容</button>
@@ -1552,9 +1448,7 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
           </div>
         </div>
       )}
-
-      {/* 刪除確認 Modal */}
-      <ConfirmModal isOpen={deleteId !== null} title="刪除文章" message="確定要刪除這篇文章嗎？刪除後將無法復原。" onCancel={() => setDeleteId(null)} onConfirm={confirmDelete} />
+      <ConfirmModal isOpen={deleteId !== null} title="刪除文章" message="確定要刪除這篇文章嗎？刪除後將無法復原。" onCancel={() => setDeleteId(null)} onConfirm={() => { updateAppState({ articles: articles.filter(a => a.id !== deleteId) }); setDeleteId(null); }} />
     </div>
   );
 }
