@@ -497,6 +497,7 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
   const confirmAddAward = () => {
     if(newAward.title.trim()) {
       const newAwardsList = [{ id: Date.now(), date: newAward.date, title: newAward.title }, ...awards];
+      newAwardsList.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       updateAppState({ awards: newAwardsList });
       setShowAddAwardModal(false);
       setNewAward({ date: '', title: '' });
@@ -638,9 +639,9 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
               {awards.length === 0 ? (
                  <p className="text-sm text-gray-400 text-center py-4">目前尚無榮譽紀錄</p>
               ) : (
-                awards.map((award, index) => (
+                [...awards].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((award, index, arr) => (
                   <div key={award.id} className="flex gap-4 items-start relative group">
-                    {index !== awards.length - 1 && (<div className="absolute left-[11px] top-8 bottom-[-24px] w-[2px] bg-gray-100"></div>)}
+                    {index !== arr.length - 1 && (<div className="absolute left-[11px] top-8 bottom-[-24px] w-[2px] bg-gray-100"></div>)}
                     <div className="w-6 h-6 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0 z-10 mt-0.5"><Award size={14} /></div>
                     <div className="flex-1">
                       <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">{award.date}</span>
