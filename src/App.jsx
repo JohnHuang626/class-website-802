@@ -65,7 +65,12 @@ const getYouTubeVideoId = (url) => {
 // --- 輔助工具：判斷是否為支援的影片平台 ---
 const isRecognizedVideo = (url) => {
   if (!url) return false;
-  return getYouTubeVideoId(url) || url.includes('instagram.com') || url.includes('facebook.com') || url.includes('fb.watch') || url.toLowerCase().endsWith('.mp4');
+  return getYouTubeVideoId(url) || 
+         url.includes('instagram.com') || 
+         url.includes('facebook.com') || 
+         url.includes('fb.watch') || 
+         url.toLowerCase().endsWith('.mp4') ||
+         (url.includes('drive.google.com') && url.includes('/preview')); // 支援 Google Drive Preview
 };
 
 // =========================================================================
@@ -202,6 +207,15 @@ function MediaEmbed({ url, className="mt-4" }) {
           allowFullScreen 
           title="YouTube Video"
         ></iframe>
+      </div>
+    );
+  }
+
+  // 處理 Google Drive 影片
+  if (url.includes('drive.google.com') && url.includes('/preview')) {
+    return (
+      <div className={`${className} relative w-full max-w-2xl aspect-video rounded-xl overflow-hidden bg-gray-900 shadow-md mx-auto`}>
+        <iframe src={url} className="absolute top-0 left-0 w-full h-full border-0" allowFullScreen title="Google Drive Video"></iframe>
       </div>
     );
   }
@@ -681,7 +695,7 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
 function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newPhoto, setNewPhoto] = useState({ title: '', url: '', date: '' });
+  const [newPhoto, setNewPhoto] = useState({ title: '', url: '', date: '', isVideo: false });
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // Drag & Drop States for Photos
@@ -700,17 +714,32 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
 
   const handleAddPhoto = () => {
     if(!newPhoto.url || !newPhoto.title) return;
-    // 如果是識別的影片網址，則直接保留；否則嘗試使用 processImageUrl 處理 Google Drive 圖片
-    const processedUrl = isRecognizedVideo(newPhoto.url) ? newPhoto.url.trim() : processImageUrl(newPhoto.url);
+    
+    let finalUrl = newPhoto.url.trim();
+
+    if (newPhoto.isVideo) {
+      // 處理 Google Drive 影片
+      const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
+      const match = finalUrl.match(driveRegex);
+      if (match) {
+        finalUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+    } else {
+      // 若未勾選影片，嘗試走圖片轉換流程
+      finalUrl = isRecognizedVideo(finalUrl) ? finalUrl : processImageUrl(finalUrl);
+    }
+
     const photo = {
       ...newPhoto,
-      url: processedUrl,
+      url: finalUrl,
       id: Date.now(),
       date: newPhoto.date || new Date().toISOString().split('T')[0]
     };
+    delete photo.isVideo; // 刪除暫存變數
+
     updateAppState({ photos: [photo, ...photos] });
     setShowAddModal(false);
-    setNewPhoto({ title: '', url: '', date: '' });
+    setNewPhoto({ title: '', url: '', date: '', isVideo: false });
   };
 
   const triggerDelete = (e, id) => {
@@ -806,9 +835,12 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
               <div>
                 <label className="block text-sm text-gray-600 mb-1">照片/影片網址 (URL)</label>
                 <input type="text" value={newPhoto.url} onChange={e => setNewPhoto({...newPhoto, url: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="貼上照片連結或 YouTube/FB 網址..." />
-                <p className="text-xs text-blue-600 mt-1">
-                  💡 支援 YouTube、FB、IG 影片網址，系統會自動辨識並產生播放器。
-                </p>
+                
+                {/* 增加 Google Drive 影片識別選項 */}
+                <label className="flex items-start gap-2 text-sm text-blue-800 mt-3 cursor-pointer bg-blue-50 p-3 rounded-lg border border-blue-100 w-full hover:bg-blue-100 transition-colors">
+                  <input type="checkbox" checked={newPhoto.isVideo || false} onChange={e => setNewPhoto({...newPhoto, isVideo: e.target.checked})} className="mt-0.5 w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                  <span className="font-medium">這是一支影片<br/><span className="text-xs text-blue-600 font-normal">(若您貼上的是 Google Drive 影片連結，請務必打勾，系統才能為您轉換成播放器)</span></span>
+                </label>
               </div>
               <div><label className="block text-sm text-gray-600 mb-1">標題</label><input type="text" value={newPhoto.title} onChange={e => setNewPhoto({...newPhoto, title: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
               <div><label className="block text-sm text-gray-600 mb-1">日期</label><input type="date" value={newPhoto.date} onChange={e => setNewPhoto({...newPhoto, date: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
@@ -1091,8 +1123,13 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
 
   const confirmAddVideo = () => {
     if(newVideo.title.trim() && newVideo.url.trim()) {
-      const videoId = getYouTubeVideoId(newVideo.url);
-      const newVideos = [...videos, { id: Date.now(), title: newVideo.title, url: newVideo.url, videoId: videoId, views: 0 }];
+      let finalUrl = newVideo.url.trim();
+      const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
+      const match = finalUrl.match(driveRegex);
+      if (match) finalUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+
+      const videoId = getYouTubeVideoId(finalUrl);
+      const newVideos = [...videos, { id: Date.now(), title: newVideo.title, url: finalUrl, videoId: videoId, views: 0 }];
       updateAppState({ videos: newVideos });
       setShowAddVideoModal(false);
       setNewVideo({ title: '', url: '' });
@@ -1111,9 +1148,14 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
 
   const saveEditVideo = () => {
     if(editVideoData.title.trim() && editVideoData.url.trim()) {
-      const videoId = getYouTubeVideoId(editVideoData.url);
+      let finalUrl = editVideoData.url.trim();
+      const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
+      const match = finalUrl.match(driveRegex);
+      if (match) finalUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+
+      const videoId = getYouTubeVideoId(finalUrl);
       const newVideos = videos.map(v => 
-        v.id === editingVideoId ? { ...v, title: editVideoData.title, url: editVideoData.url, videoId: videoId } : v
+        v.id === editingVideoId ? { ...v, title: editVideoData.title, url: finalUrl, videoId: videoId } : v
       );
       updateAppState({ videos: newVideos });
       setEditingVideoId(null);
@@ -1259,8 +1301,14 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
                   ) : (
                     <>
                       <a href={video.url} target="_blank" rel="noopener noreferrer" className="relative w-32 md:w-40 aspect-video bg-gray-900 rounded-lg overflow-hidden shrink-0 flex items-center justify-center group-hover:opacity-90">
-                        <img src={video.videoId ? `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg` : `https://images.unsplash.com/photo-1632516643720-e7f0d7e6a727?auto=format&fit=crop&q=80&w=400&sig=${video.id}`} alt="thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
-                        <Play className="text-white w-8 h-8 opacity-80 group-hover:scale-110 transition-transform" />
+                        {video.videoId ? (
+                          <img src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`} alt="thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                        ) : isRecognizedVideo(video.url) && video.url.includes('drive.google.com') ? (
+                          <Video size={32} className="text-gray-500 absolute z-0" />
+                        ) : (
+                          <img src={`https://images.unsplash.com/photo-1632516643720-e7f0d7e6a727?auto=format&fit=crop&q=80&w=400&sig=${video.id}`} alt="thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                        )}
+                        <Play className="text-white w-8 h-8 opacity-80 group-hover:scale-110 transition-transform relative z-10" />
                       </a>
                       <div className="flex flex-col justify-center flex-1 pr-16">
                         <a href={video.url} target="_blank" rel="noopener noreferrer"><h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">{video.title}</h4></a>
@@ -1428,7 +1476,7 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
   
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [formData, setFormData] = useState({ title: '', category: '', content: '', url: '', date: '' });
+  const [formData, setFormData] = useState({ title: '', category: '', content: '', url: '', date: '', isVideo: false });
   const [deleteId, setDeleteId] = useState(null);
 
   const categories = ['全部', ...Array.from(new Set(articles.map(a => a.category).filter(Boolean)))];
@@ -1437,10 +1485,10 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
   const handleOpenModal = (article = null) => {
     if (article) {
       setEditId(article.id);
-      setFormData(article);
+      setFormData({...article, isVideo: false}); // 預設 isVideo 給表單用，但不存入資料庫
     } else {
       setEditId(null);
-      setFormData({ title: '', category: '', content: '', url: '', date: new Date().toISOString().split('T')[0] });
+      setFormData({ title: '', category: '', content: '', url: '', date: new Date().toISOString().split('T')[0], isVideo: false });
     }
     setShowModal(true);
   };
@@ -1450,11 +1498,24 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
       alert('請至少填寫「文章標題」與「文章分類」');
       return;
     }
+    
+    let finalUrl = formData.url ? formData.url.trim() : '';
+    if (formData.isVideo && finalUrl) {
+      const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
+      const match = finalUrl.match(driveRegex);
+      if (match) {
+        finalUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+    }
+    
+    const dataToSave = { ...formData, url: finalUrl };
+    delete dataToSave.isVideo;
+
     if (editId) {
-      const newArticles = articles.map(a => a.id === editId ? { ...formData, id: editId } : a);
+      const newArticles = articles.map(a => a.id === editId ? { ...dataToSave, id: editId } : a);
       updateAppState({ articles: newArticles });
     } else {
-      const newArticles = [{ ...formData, id: Date.now() }, ...articles];
+      const newArticles = [{ ...dataToSave, id: Date.now() }, ...articles];
       updateAppState({ articles: newArticles });
     }
     setShowModal(false);
@@ -1544,7 +1605,15 @@ function ArticlesView({ isAdmin, articles, updateAppState, ConfirmModal }) {
                 </div>
               </div>
               <div><label className="block text-sm text-gray-600 mb-1">發布日期</label><input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-              <div><label className="block text-sm text-gray-600 mb-1">外部連結或影片網址 (選填) - 支援 YouTube, FB, IG</label><input type="text" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." /></div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">外部連結或影片網址 (選填) - 支援 YouTube, FB, IG</label>
+                <input type="text" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
+                
+                <label className="flex items-start gap-2 text-sm text-blue-800 mt-3 cursor-pointer bg-blue-50 p-3 rounded-lg border border-blue-100 w-full hover:bg-blue-100 transition-colors">
+                  <input type="checkbox" checked={formData.isVideo || false} onChange={e => setFormData({...formData, isVideo: e.target.checked})} className="mt-0.5 w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                  <span className="font-medium">將此連結作為影片嵌入<br/><span className="text-xs text-blue-600 font-normal">(若您貼上的是 Google Drive 影片連結，請務必打勾，系統才能為您轉換成播放器)</span></span>
+                </label>
+              </div>
               <div><label className="block text-sm text-gray-600 mb-1">內容或心得</label><textarea value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[150px]" placeholder="在此輸入或貼上文章內容..." /></div>
             </div>
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
