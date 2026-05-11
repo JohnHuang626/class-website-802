@@ -65,7 +65,7 @@ const getYouTubeVideoId = (url) => {
 // --- 輔助工具：判斷是否為支援的影片平台 ---
 const isRecognizedVideo = (url) => {
   if (!url) return false;
-  return getYouTubeVideoId(url) || url.includes('instagram.com') || url.includes('facebook.com') || url.includes('fb.watch');
+  return getYouTubeVideoId(url) || url.includes('instagram.com') || url.includes('facebook.com') || url.includes('fb.watch') || url.toLowerCase().endsWith('.mp4');
 };
 
 // =========================================================================
@@ -107,7 +107,7 @@ const INITIAL_ROSTER = [
 const INITIAL_PHOTOS = [
   { id: 1, url: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800', title: '校慶運動會大隊接力', date: '2026-11-15' },
   { id: 2, url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800', title: '數學科展準備', date: '2026-10-20' },
-  { id: 3, url: 'https://images.unsplash.com/photo-1529390079861-591de354faf5?auto=format&fit=crop&q=80&w=800', title: '戶外教學：科博館', date: '2026-09-05' },
+  { id: 3, url: 'https://www.youtube.com/watch?v=ObP0FjYkRNE', title: '科博館戶外教學紀錄片', date: '2026-09-05' },
   { id: 4, url: 'https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&q=80&w=800', title: '期中考後同樂會', date: '2026-04-10' },
 ];
 
@@ -189,13 +189,13 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
 }
 
 // --- 共用元件：媒體嵌入顯示器 ---
-function MediaEmbed({ url }) {
+function MediaEmbed({ url, className="mt-4" }) {
   if (!url) return null;
 
   const ytId = getYouTubeVideoId(url);
   if (ytId) {
     return (
-      <div className="mt-4 relative w-full max-w-2xl aspect-video rounded-xl overflow-hidden bg-gray-900 shadow-md">
+      <div className={`${className} relative w-full max-w-2xl aspect-video rounded-xl overflow-hidden bg-gray-900 shadow-md mx-auto`}>
         <iframe 
           src={`https://www.youtube.com/embed/${ytId}`} 
           className="absolute top-0 left-0 w-full h-full border-0"
@@ -210,7 +210,7 @@ function MediaEmbed({ url }) {
     const cleanUrl = url.split('?')[0].replace(/\/$/, '');
     const embedUrl = `${cleanUrl}/embed`;
     return (
-      <div className="mt-4 w-full max-w-md bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+      <div className={`${className} w-full max-w-md bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden mx-auto`}>
         <iframe src={embedUrl} width="100%" height="480" frameBorder="0" scrolling="no" allowTransparency="true" title="Instagram Video"></iframe>
       </div>
     );
@@ -219,15 +219,22 @@ function MediaEmbed({ url }) {
   if (url.includes('facebook.com') || url.includes('fb.watch')) {
     const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&width=560`;
     return (
-      <div className="mt-4 w-full max-w-2xl bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden relative" style={{ paddingTop: '56.25%' }}>
+      <div className={`${className} w-full max-w-2xl bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden relative mx-auto`} style={{ paddingTop: '56.25%' }}>
         <iframe src={embedUrl} className="absolute top-0 left-0 w-full h-full border-0" scrolling="no" frameBorder="0" allowFullScreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" title="Facebook Video"></iframe>
+      </div>
+    );
+  }
+
+  if (url.toLowerCase().endsWith('.mp4')) {
+    return (
+      <div className={`${className} w-full max-w-2xl bg-black rounded-xl overflow-hidden shadow-md mx-auto`}>
+        <video src={url} controls className="w-full h-auto max-h-[70vh] mx-auto"></video>
       </div>
     );
   }
 
   return null;
 }
-
 
 export default function App() {
   const [appState, setAppState] = useState({
@@ -251,10 +258,8 @@ export default function App() {
   const [adminPwd, setAdminPwd] = useState('');
   const [loginError, setLoginError] = useState('');
   
-  // 使用 undefined 代表「驗證尚未完成」
   const [user, setUser] = useState(undefined);
 
-  // 1. 處理身份驗證
   useEffect(() => {
     if (!auth) {
        setUser({ uid: 'local-user' }); 
@@ -270,18 +275,14 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // 2. 確保驗證完成後才抓取 Firebase 資料
   useEffect(() => {
-    // 驗證未完成時，不要繼續，讓 isLoaded 保持 false 顯示圈圈
     if (user === undefined) return; 
 
-    // 本機開發或沒有連線資料庫
     if (!db || user.uid === 'local-user') {
         setIsLoaded(true);
         return;
     }
     
-    // 連線 Firebase
     const docRef = doc(db, 'class_data', appId);
     const unsub = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -289,7 +290,7 @@ export default function App() {
         } else {
             setDoc(docRef, appState);
         }
-        setIsLoaded(true); // 確認雲端資料回來了，才解除載入畫面
+        setIsLoaded(true);
     }, (err) => {
         console.error(err);
         setIsLoaded(true);
@@ -308,6 +309,7 @@ export default function App() {
   };
 
   useEffect(() => {
+    document.title = "2班班網";
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -569,14 +571,37 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
                  目前尚無最新活動照片
                </div>
             ) : (
-              photos.slice(0, 2).map((photo) => (
-                <div key={photo.id} className="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer" onClick={() => navigateTo('photos')}>
-                  <img src={photo.url} alt={photo.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                    <p className="text-white font-medium truncate">{photo.title}</p>
+              photos.slice(0, 2).map((photo) => {
+                const isVideo = isRecognizedVideo(photo.url);
+                const ytId = getYouTubeVideoId(photo.url);
+                
+                return (
+                  <div key={photo.id} className="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer" onClick={() => navigateTo('photos')}>
+                    {isVideo && !ytId ? (
+                      <div className="w-full h-full bg-gray-800 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-700">
+                         <Video size={48} className="text-gray-600" />
+                      </div>
+                    ) : (
+                      <img 
+                        src={isVideo ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : photo.url} 
+                        alt={photo.title} 
+                        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" 
+                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }} 
+                      />
+                    )}
+                    
+                    {isVideo && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        <Play className="text-white w-10 h-10 opacity-80 drop-shadow-lg filter" />
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 z-20">
+                      <p className="text-white font-medium truncate">{photo.title}</p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -675,7 +700,8 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
 
   const handleAddPhoto = () => {
     if(!newPhoto.url || !newPhoto.title) return;
-    const processedUrl = processImageUrl(newPhoto.url);
+    // 如果是識別的影片網址，則直接保留；否則嘗試使用 processImageUrl 處理 Google Drive 圖片
+    const processedUrl = isRecognizedVideo(newPhoto.url) ? newPhoto.url.trim() : processImageUrl(newPhoto.url);
     const photo = {
       ...newPhoto,
       url: processedUrl,
@@ -700,60 +726,89 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in">
       <div className="text-center mb-12 relative">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4 inline-block relative">活動照片<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-blue-600 rounded-full mt-2"></div></h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-4 inline-block relative">活動影音照片<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-blue-600 rounded-full mt-2"></div></h2>
         <p className="text-gray-500 max-w-2xl mx-auto">記錄每一刻的笑容與汗水，這裡是孩子們三年國中生活最珍貴的回憶庫。</p>
         {isAdmin && (
           <div className="absolute right-0 top-0">
              <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-blue-700 transition-colors">
-              <Plus size={16} /> 新增照片
+              <Plus size={16} /> 新增照片/影片
             </button>
           </div>
         )}
       </div>
 
       <div className="columns-1 sm:columns-2 md:columns-3 gap-6 space-y-6">
-        {photos.map((photo, index) => (
-          <div 
-            key={photo.id} 
-            draggable={isAdmin}
-            onDragStart={() => (dragPhotoItem.current = index)}
-            onDragEnter={() => (dragPhotoOverItem.current = index)}
-            onDragEnd={handlePhotoSort}
-            onDragOver={(e) => e.preventDefault()}
-            className={`break-inside-avoid relative rounded-2xl overflow-hidden group shadow-sm hover:shadow-xl transition-all ${isAdmin ? 'cursor-move' : 'cursor-pointer'}`} 
-            onClick={() => setSelectedImage(photo)}
-          >
-            {isAdmin && (
-              <div className="absolute top-4 left-4 z-10 bg-black/40 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm pointer-events-none">
-                <GripVertical size={16} />
+        {photos.map((photo, index) => {
+          const isVideo = isRecognizedVideo(photo.url);
+          const ytId = getYouTubeVideoId(photo.url);
+
+          return (
+            <div 
+              key={photo.id} 
+              draggable={isAdmin}
+              onDragStart={() => (dragPhotoItem.current = index)}
+              onDragEnter={() => (dragPhotoOverItem.current = index)}
+              onDragEnd={handlePhotoSort}
+              onDragOver={(e) => e.preventDefault()}
+              className={`break-inside-avoid relative rounded-2xl overflow-hidden group shadow-sm hover:shadow-xl transition-all ${isAdmin ? 'cursor-move' : 'cursor-pointer'}`} 
+              onClick={() => setSelectedImage(photo)}
+            >
+              {isAdmin && (
+                <div className="absolute top-4 left-4 z-20 bg-black/40 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm pointer-events-none">
+                  <GripVertical size={16} />
+                </div>
+              )}
+              
+              {isVideo && !ytId ? (
+                <div className="w-full min-h-[200px] bg-gray-800 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-700">
+                   <Video size={48} className="text-gray-600" />
+                </div>
+              ) : (
+                <img 
+                  src={isVideo ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : photo.url} 
+                  alt={photo.title} 
+                  className="w-full h-auto transform group-hover:scale-105 transition-transform duration-700" 
+                  loading="lazy" 
+                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }} 
+                />
+              )}
+
+              {isVideo && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                  <Play className="text-white w-12 h-12 opacity-80 drop-shadow-lg filter" />
+                </div>
+              )}
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 z-20">
+                <span className="text-white/80 text-sm mb-1">{photo.date}</span>
+                <h3 className="text-white font-bold text-lg">{photo.title}</h3>
               </div>
-            )}
-            <img src={photo.url} alt={photo.title} className="w-full h-auto transform group-hover:scale-105 transition-transform duration-700" loading="lazy" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }} />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-              <span className="text-white/80 text-sm mb-1">{photo.date}</span>
-              <h3 className="text-white font-bold text-lg">{photo.title}</h3>
+              
+              {isAdmin && (
+                <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(photo.id); }} className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md z-30">
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
-            {isAdmin && (
-              <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(photo.id); }} className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md z-10">
-                <Trash2 size={16} />
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
       
-      {photos.length === 0 && <div className="text-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-100">目前尚無活動照片</div>}
+      {photos.length === 0 && <div className="text-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-100">目前尚無活動照片或影片</div>}
 
-      <ConfirmModal isOpen={deleteConfirmId !== null} title="刪除照片" message="確定要刪除這張照片嗎？刪除後無法復原。" onCancel={() => setDeleteConfirmId(null)} onConfirm={() => { updateAppState({ photos: photos.filter(p => p.id !== deleteConfirmId) }); setDeleteConfirmId(null); }} />
+      <ConfirmModal isOpen={deleteConfirmId !== null} title="刪除項目" message="確定要刪除這個項目嗎？刪除後無法復原。" onCancel={() => setDeleteConfirmId(null)} onConfirm={() => { updateAppState({ photos: photos.filter(p => p.id !== deleteConfirmId) }); setDeleteConfirmId(null); }} />
 
       {showAddModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-xl font-bold mb-4">新增照片</h3>
+            <h3 className="text-xl font-bold mb-4">新增照片 / 影片</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-1">照片網址 (URL)</label>
-                <input type="text" value={newPhoto.url} onChange={e => setNewPhoto({...newPhoto, url: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="可直接貼上 Google 雲端連結..." />
+                <label className="block text-sm text-gray-600 mb-1">照片/影片網址 (URL)</label>
+                <input type="text" value={newPhoto.url} onChange={e => setNewPhoto({...newPhoto, url: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="貼上照片連結或 YouTube/FB 網址..." />
+                <p className="text-xs text-blue-600 mt-1">
+                  💡 支援 YouTube、FB、IG 影片網址，系統會自動辨識並產生播放器。
+                </p>
               </div>
               <div><label className="block text-sm text-gray-600 mb-1">標題</label><input type="text" value={newPhoto.title} onChange={e => setNewPhoto({...newPhoto, title: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
               <div><label className="block text-sm text-gray-600 mb-1">日期</label><input type="date" value={newPhoto.date} onChange={e => setNewPhoto({...newPhoto, date: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
@@ -768,9 +823,17 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
 
       {selectedImage && (
         <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setSelectedImage(null)}>
-          <button className="absolute top-6 right-6 text-white/70 hover:text-white p-2" onClick={() => setSelectedImage(null)}><X size={32} /></button>
-          <div className="max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
-            <img src={selectedImage.url} alt={selectedImage.title} className="w-full h-auto max-h-[80vh] object-contain rounded-lg" />
+          <button className="absolute top-6 right-6 text-white/70 hover:text-white p-2 z-[110]" onClick={() => setSelectedImage(null)}><X size={32} /></button>
+          
+          <div className="max-w-5xl w-full flex flex-col items-center justify-center h-full" onClick={(e) => e.stopPropagation()}>
+            {isRecognizedVideo(selectedImage.url) ? (
+              <div className="w-full max-w-4xl flex items-center justify-center">
+                <MediaEmbed url={selectedImage.url} className="" />
+              </div>
+            ) : (
+              <img src={selectedImage.url} alt={selectedImage.title} className="w-full h-auto max-h-[80vh] object-contain rounded-lg" />
+            )}
+            
             <div className="text-center mt-6">
               <h3 className="text-white text-2xl font-bold">{selectedImage.title}</h3>
               <p className="text-gray-400 mt-2">{selectedImage.date}</p>
@@ -1284,9 +1347,11 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
         </div>
       </div>
 
+      {/* Delete Modals */}
       <ConfirmModal isOpen={deleteVideoId !== null} title="刪除影片" message="確定移除這部教學影片嗎？" onCancel={() => setDeleteVideoId(null)} onConfirm={confirmDeleteVideo} />
       <ConfirmModal isOpen={deleteMaterialId !== null} title="刪除教材" message="確定移除這份補充教材嗎？" onCancel={() => setDeleteMaterialId(null)} onConfirm={confirmDeleteMaterial} />
 
+      {/* Add Video Modal */}
       {showAddVideoModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -1309,6 +1374,7 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
         </div>
       )}
 
+      {/* Add Material Modal */}
       {showAddMaterialModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -1331,13 +1397,14 @@ function ResourcesView({ isAdmin, ConfirmModal, videos, materials, updateAppStat
         </div>
       )}
 
+      {/* Import/Export Modal */}
       {showIOModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
             <h3 className="text-xl font-bold mb-2">匯入 / 匯出 {ioType === 'videos' ? '教學影片' : '補充教材'}</h3>
             <p className="text-sm text-gray-600 mb-4">
               您可以在此複製目前的資料備份，或是貼上 JSON 格式資料進行整筆匯入。<br/>
-              <span className="text-blue-600 font-medium">💡 小技巧：若想永遠變成預設值，請貼到程式碼 INITIAL 區塊內。</span>
+              <span className="text-blue-600 font-medium">💡 小技巧：貼上大量資料後，系統會自動幫您解析影片縮圖與教材類型標籤。若想永久保存為預設值，請一併貼到程式碼的 INITIAL_VIDEOS 或 INITIAL_MATERIALS 區塊！</span>
             </p>
             <div className="flex-1 overflow-hidden flex flex-col min-h-[300px]">
               <textarea value={ioText} onChange={(e) => setIoText(e.target.value)} spellCheck="false" className="w-full flex-1 p-4 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none resize-none" />
