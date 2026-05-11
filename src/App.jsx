@@ -589,16 +589,17 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
               photos.slice(0, 2).map((photo) => {
                 const isVideo = isRecognizedVideo(photo.url);
                 const ytId = getYouTubeVideoId(photo.url);
+                const displayImg = photo.coverUrl ? photo.coverUrl : (isVideo && ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : photo.url);
                 
                 return (
                   <div key={photo.id} className="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer" onClick={() => navigateTo('photos')}>
-                    {isVideo && !ytId ? (
+                    {isVideo && !ytId && !photo.coverUrl ? (
                       <div className="w-full h-full bg-gray-800 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-700">
                          <Video size={48} className="text-gray-600" />
                       </div>
                     ) : (
                       <img 
-                        src={isVideo ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : photo.url} 
+                        src={displayImg} 
                         alt={photo.title} 
                         className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" 
                         onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; }} 
@@ -696,7 +697,7 @@ function HomeView({ navigateTo, isAdmin, heroBg, photos, awards, updateAppState,
 function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newPhoto, setNewPhoto] = useState({ title: '', url: '', date: '', isVideo: false });
+  const [newPhoto, setNewPhoto] = useState({ title: '', url: '', date: '', isVideo: false, coverUrl: '' });
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // Drag & Drop States for Photos
@@ -717,6 +718,7 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
     if(!newPhoto.url || !newPhoto.title) return;
     
     let finalUrl = newPhoto.url.trim();
+    let finalCoverUrl = newPhoto.coverUrl ? processImageUrl(newPhoto.coverUrl.trim()) : '';
 
     if (newPhoto.isVideo) {
       // 處理 Google Drive 影片
@@ -731,16 +733,16 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
     }
 
     const photo = {
-      ...newPhoto,
+      title: newPhoto.title,
       url: finalUrl,
+      coverUrl: finalCoverUrl,
       id: Date.now(),
       date: newPhoto.date || new Date().toISOString().split('T')[0]
     };
-    delete photo.isVideo; // 刪除暫存變數
 
     updateAppState({ photos: [photo, ...photos] });
     setShowAddModal(false);
-    setNewPhoto({ title: '', url: '', date: '', isVideo: false });
+    setNewPhoto({ title: '', url: '', date: '', isVideo: false, coverUrl: '' });
   };
 
   const triggerDelete = (e, id) => {
@@ -771,6 +773,7 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
         {photos.map((photo, index) => {
           const isVideo = isRecognizedVideo(photo.url);
           const ytId = getYouTubeVideoId(photo.url);
+          const displayImg = photo.coverUrl ? photo.coverUrl : (isVideo && ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : photo.url);
 
           return (
             <div 
@@ -789,13 +792,13 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
                 </div>
               )}
               
-              {isVideo && !ytId ? (
+              {isVideo && !ytId && !photo.coverUrl ? (
                 <div className="w-full min-h-[200px] bg-gray-800 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-700">
                    <Video size={48} className="text-gray-600" />
                 </div>
               ) : (
                 <img 
-                  src={isVideo ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : photo.url} 
+                  src={displayImg} 
                   alt={photo.title} 
                   className="w-full h-auto transform group-hover:scale-105 transition-transform duration-700" 
                   loading="lazy" 
@@ -832,7 +835,7 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <h3 className="text-xl font-bold mb-4">新增照片 / 影片</h3>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               <div>
                 <label className="block text-sm text-gray-600 mb-1">照片/影片網址 (URL)</label>
                 <input type="text" value={newPhoto.url} onChange={e => setNewPhoto({...newPhoto, url: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="貼上照片連結或 YouTube/FB 網址..." />
@@ -840,15 +843,23 @@ function PhotosView({ isAdmin, ConfirmModal, photos, updateAppState }) {
                 {/* 增加 Google Drive 影片識別選項 */}
                 <label className="flex items-start gap-2 text-sm text-blue-800 mt-3 cursor-pointer bg-blue-50 p-3 rounded-lg border border-blue-100 w-full hover:bg-blue-100 transition-colors">
                   <input type="checkbox" checked={newPhoto.isVideo || false} onChange={e => setNewPhoto({...newPhoto, isVideo: e.target.checked})} className="mt-0.5 w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                  <span className="font-medium">這是一支影片<br/><span className="text-xs text-blue-600 font-normal">(若您貼上的是 Google Drive 影片連結，請務必打勾，系統才能為您轉換成播放器)</span></span>
+                  <span className="font-medium">這是一支影片<br/><span className="text-xs text-blue-600 font-normal">(若為 Google Drive 影片，請務必打勾以啟動播放器)</span></span>
                 </label>
               </div>
+
+              {/* 自訂封面欄位 */}
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">自訂封面照片網址 (選填)</label>
+                <input type="text" value={newPhoto.coverUrl || ''} onChange={e => setNewPhoto({...newPhoto, coverUrl: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="貼上封面照片連結..." />
+                <p className="text-xs text-gray-500 mt-1">若上方為 Google Drive 影片，強烈建議提供封面照片，否則將顯示黑色預設背景。</p>
+              </div>
+
               <div><label className="block text-sm text-gray-600 mb-1">標題</label><input type="text" value={newPhoto.title} onChange={e => setNewPhoto({...newPhoto, title: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
               <div><label className="block text-sm text-gray-600 mb-1">日期</label><input type="date" value={newPhoto.date} onChange={e => setNewPhoto({...newPhoto, date: e.target.value})} className="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-              <div className="flex gap-2 justify-end mt-6">
-                <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
-                <button onClick={handleAddPhoto} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">確認新增</button>
-              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-6 pt-4 border-t border-gray-100">
+              <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
+              <button onClick={handleAddPhoto} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">確認新增</button>
             </div>
           </div>
         </div>
